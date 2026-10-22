@@ -1,0 +1,13 @@
+{
+  "model": "sam2.1_hiera_small",
+  "config": "configs/sam2.1/sam2.1_hiera_s.yaml",
+  "file": "sam2.1_hiera_small.pt",
+  "bytes": 184416285,
+  "sha256": "6d1aa6f30de5c92224f8172114de081d104bbd23dd9dc5c58996f0cad5dc4d38",
+  "url": "https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_small.pt",
+  "source_commit": "2b90b9f5ceec907a1c18123530e92e794ad901a4",
+  "source_archive_sha256": "fe93082a71a885a427894b1eab76341768781b6b58a298a0717e03862097d137",
+  "license": "Apache-2.0 (model and source); optional cctorch BSD-3-Clause",
+  "source": "https://github.com/facebookresearch/sam2",
+  "runtime": "native Windows, optional CUDA extension disabled"
+}

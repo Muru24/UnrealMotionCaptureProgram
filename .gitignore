@@ -1,0 +1,56 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+
+.validation/
+snapshots/
+outputs/
+models/**/*.onnx
+models/**/*.task
+models/**/*.ckpt
+models/**/*.pt
+models/**/.cache/
+
+# Local model binaries and account-specific access results
+models/**/*.bin
+models/**/*.safetensors
+models/**/access-check.json
+models/**/download-manifest.json
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Reproducible validation outputs; retain validation scripts
+/validation/*
+!/validation/*.py
+/transfer/
+/진행상황/
+
+# Keep only runtime vendor sources; never environments or authentication files
+!/.validation/
+/.validation/*
+!/.validation/sam3d/
+/.validation/sam3d/*
+!/.validation/sam3d/source_cuda/
+!/.validation/sam2/
+/.validation/sam2/*
+!/.validation/sam2/source/
+!/.validation/sam2/deps/
+!/.validation/motionbert/
+/.validation/motionbert/*
+!/.validation/motionbert/source/
+**/.git/
+
+# Current Unreal example only; caches remain local
+/UnrealProjects/*
+!/UnrealProjects/MotionCheckUE58/
+**/DerivedDataCache/
+**/Intermediate/
+**/Saved/
+**/Binaries/
+*.log
+*.tmp
+*.blend1

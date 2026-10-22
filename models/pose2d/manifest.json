@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "file": "yolox-tiny.onnx",
+    "sha256": "ceb11c07298f95c50d7c5abeb906d03340c85f23aa79e3e66966e7fb6c307250",
+    "archive_url": "https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/onnx_sdk/yolox_tiny_8xb8-300e_humanart-6f3252f9.zip",
+    "input_size": [416, 416]
+  },
+  "pose": {
+    "file": "rtmpose-m.onnx",
+    "sha256": "5c0a4bf67953e6d2ac43ce15e77dc9d5d354ae18430a47d2c5963a7bc5683e3c",
+    "archive_url": "https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/onnx_sdk/rtmpose-m_simcc-body7_pt-body7_420e-256x192-e48f03d0_20230504.zip",
+    "input_size": [192, 256]
+  }
+}

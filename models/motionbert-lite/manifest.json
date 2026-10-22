@@ -1,0 +1,37 @@
+{
+  "repository": "walterzhu/MotionBERT",
+  "revision": "370a9196aa3c89198b134c82476143b01c0fb32c",
+  "license": "Apache-2.0",
+  "files": [
+    {
+      "path": ".validation\\motionbert\\source\\LICENSE",
+      "url": "https://huggingface.co/walterzhu/MotionBERT/resolve/370a9196aa3c89198b134c82476143b01c0fb32c/LICENSE",
+      "bytes": 11372,
+      "sha256": "045ee95b545fb51f5c6e28e1a50644fe618f6278f3c8720852c6fe96f53b472f"
+    },
+    {
+      "path": ".validation\\motionbert\\source\\lib\\model\\DSTformer.py",
+      "url": "https://huggingface.co/walterzhu/MotionBERT/resolve/370a9196aa3c89198b134c82476143b01c0fb32c/lib/model/DSTformer.py",
+      "bytes": 16101,
+      "sha256": "0896b29872b10f55be8902ceceacb9febe7876fa2065d5f9dd670fbb902f2f47"
+    },
+    {
+      "path": ".validation\\motionbert\\source\\lib\\model\\drop.py",
+      "url": "https://huggingface.co/walterzhu/MotionBERT/resolve/370a9196aa3c89198b134c82476143b01c0fb32c/lib/model/drop.py",
+      "bytes": 1978,
+      "sha256": "44b1af7912ae46c62c5b74712dae31697afc697e788c8dd9c5050602a2397173"
+    },
+    {
+      "path": ".validation\\motionbert\\source\\configs\\pose3d\\MB_ft_h36m_global_lite.yaml",
+      "url": "https://huggingface.co/walterzhu/MotionBERT/resolve/370a9196aa3c89198b134c82476143b01c0fb32c/configs/pose3d/MB_ft_h36m_global_lite.yaml",
+      "bytes": 725,
+      "sha256": "672bb3ae05e89966acfbf395d601c7a22df0d2c038942d8ac0e585bce23dc8da"
+    },
+    {
+      "path": "models\\motionbert-lite\\best_epoch.bin",
+      "url": "https://huggingface.co/walterzhu/MotionBERT/resolve/370a9196aa3c89198b134c82476143b01c0fb32c/checkpoint/pose3d/FT_MB_lite_MB_ft_h36m_global_lite/best_epoch.bin",
+      "bytes": 64099897,
+      "sha256": "9811155371db4ca5d20f31a36a232d41012e12e1333882888a564d741861148f"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "blender_version": "5.1.1",
+  "bones": 22,
+  "roots": [
+    "root"
+  ],
+  "mesh_vertices": 126,
+  "vertex_groups": 21,
+  "asset_files": [
+    "MotionHumanoid22.blend",
+    "MotionHumanoid22_Unity.fbx",
+    "MotionHumanoid22_Unreal.fbx"
+  ],
+  "scale_length": 1.0,
+  "animation_baked": false,
+  "unreal_import_verified": false,
+  "unity_import_verified": false
+}

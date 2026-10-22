@@ -1,0 +1,362 @@
+{
+  "schema": "humanoid_reference_skeleton_v1",
+  "name": "MotionHumanoid22",
+  "reference_pose": "T-pose",
+  "units": "meters",
+  "up": "Z",
+  "forward": "-Y",
+  "bones": [
+    {
+      "name": "root",
+      "parent": null,
+      "head": [
+        0,
+        0,
+        0
+      ],
+      "tail": [
+        0,
+        0,
+        0.15
+      ],
+      "unity_role": null,
+      "deform": false
+    },
+    {
+      "name": "pelvis",
+      "parent": "root",
+      "head": [
+        0,
+        0,
+        1
+      ],
+      "tail": [
+        0,
+        0,
+        1.15
+      ],
+      "unity_role": "Hips",
+      "deform": true
+    },
+    {
+      "name": "spine_01",
+      "parent": "pelvis",
+      "head": [
+        0,
+        0,
+        1.15
+      ],
+      "tail": [
+        0,
+        0,
+        1.32
+      ],
+      "unity_role": "Spine",
+      "deform": true
+    },
+    {
+      "name": "spine_02",
+      "parent": "spine_01",
+      "head": [
+        0,
+        0,
+        1.32
+      ],
+      "tail": [
+        0,
+        0,
+        1.48
+      ],
+      "unity_role": "Chest",
+      "deform": true
+    },
+    {
+      "name": "neck_01",
+      "parent": "spine_02",
+      "head": [
+        0,
+        0,
+        1.48
+      ],
+      "tail": [
+        0,
+        0,
+        1.6
+      ],
+      "unity_role": "Neck",
+      "deform": true
+    },
+    {
+      "name": "head",
+      "parent": "neck_01",
+      "head": [
+        0,
+        0,
+        1.6
+      ],
+      "tail": [
+        0,
+        0,
+        1.8
+      ],
+      "unity_role": "Head",
+      "deform": true
+    },
+    {
+      "name": "clavicle_l",
+      "parent": "spine_02",
+      "head": [
+        0.04,
+        0,
+        1.44
+      ],
+      "tail": [
+        0.18,
+        0,
+        1.44
+      ],
+      "unity_role": "LeftShoulder",
+      "deform": true
+    },
+    {
+      "name": "upperarm_l",
+      "parent": "clavicle_l",
+      "head": [
+        0.18,
+        0,
+        1.44
+      ],
+      "tail": [
+        0.48,
+        0,
+        1.44
+      ],
+      "unity_role": "LeftUpperArm",
+      "deform": true
+    },
+    {
+      "name": "lowerarm_l",
+      "parent": "upperarm_l",
+      "head": [
+        0.48,
+        0,
+        1.44
+      ],
+      "tail": [
+        0.75,
+        0,
+        1.44
+      ],
+      "unity_role": "LeftLowerArm",
+      "deform": true
+    },
+    {
+      "name": "hand_l",
+      "parent": "lowerarm_l",
+      "head": [
+        0.75,
+        0,
+        1.44
+      ],
+      "tail": [
+        0.85,
+        0,
+        1.44
+      ],
+      "unity_role": "LeftHand",
+      "deform": true
+    },
+    {
+      "name": "thigh_l",
+      "parent": "pelvis",
+      "head": [
+        0.1,
+        0,
+        1
+      ],
+      "tail": [
+        0.1,
+        0,
+        0.55
+      ],
+      "unity_role": "LeftUpperLeg",
+      "deform": true
+    },
+    {
+      "name": "calf_l",
+      "parent": "thigh_l",
+      "head": [
+        0.1,
+        0,
+        0.55
+      ],
+      "tail": [
+        0.1,
+        0,
+        0.1
+      ],
+      "unity_role": "LeftLowerLeg",
+      "deform": true
+    },
+    {
+      "name": "foot_l",
+      "parent": "calf_l",
+      "head": [
+        0.1,
+        0,
+        0.1
+      ],
+      "tail": [
+        0.1,
+        -0.18,
+        0.06
+      ],
+      "unity_role": "LeftFoot",
+      "deform": true
+    },
+    {
+      "name": "ball_l",
+      "parent": "foot_l",
+      "head": [
+        0.1,
+        -0.18,
+        0.06
+      ],
+      "tail": [
+        0.1,
+        -0.3,
+        0.06
+      ],
+      "unity_role": "LeftToes",
+      "deform": true
+    },
+    {
+      "name": "clavicle_r",
+      "parent": "spine_02",
+      "head": [
+        -0.04,
+        0,
+        1.44
+      ],
+      "tail": [
+        -0.18,
+        0,
+        1.44
+      ],
+      "unity_role": "RightShoulder",
+      "deform": true
+    },
+    {
+      "name": "upperarm_r",
+      "parent": "clavicle_r",
+      "head": [
+        -0.18,
+        0,
+        1.44
+      ],
+      "tail": [
+        -0.48,
+        0,
+        1.44
+      ],
+      "unity_role": "RightUpperArm",
+      "deform": true
+    },
+    {
+      "name": "lowerarm_r",
+      "parent": "upperarm_r",
+      "head": [
+        -0.48,
+        0,
+        1.44
+      ],
+      "tail": [
+        -0.75,
+        0,
+        1.44
+      ],
+      "unity_role": "RightLowerArm",
+      "deform": true
+    },
+    {
+      "name": "hand_r",
+      "parent": "lowerarm_r",
+      "head": [
+        -0.75,
+        0,
+        1.44
+      ],
+      "tail": [
+        -0.85,
+        0,
+        1.44
+      ],
+      "unity_role": "RightHand",
+      "deform": true
+    },
+    {
+      "name": "thigh_r",
+      "parent": "pelvis",
+      "head": [
+        -0.1,
+        0,
+        1
+      ],
+      "tail": [
+        -0.1,
+        0,
+        0.55
+      ],
+      "unity_role": "RightUpperLeg",
+      "deform": true
+    },
+    {
+      "name": "calf_r",
+      "parent": "thigh_r",
+      "head": [
+        -0.1,
+        0,
+        0.55
+      ],
+      "tail": [
+        -0.1,
+        0,
+        0.1
+      ],
+      "unity_role": "RightLowerLeg",
+      "deform": true
+    },
+    {
+      "name": "foot_r",
+      "parent": "calf_r",
+      "head": [
+        -0.1,
+        0,
+        0.1
+      ],
+      "tail": [
+        -0.1,
+        -0.18,
+        0.06
+      ],
+      "unity_role": "RightFoot",
+      "deform": true
+    },
+    {
+      "name": "ball_r",
+      "parent": "foot_r",
+      "head": [
+        -0.1,
+        -0.18,
+        0.06
+      ],
+      "tail": [
+        -0.1,
+        -0.3,
+        0.06
+      ],
+      "unity_role": "RightToes",
+      "deform": true
+    }
+  ]
+}

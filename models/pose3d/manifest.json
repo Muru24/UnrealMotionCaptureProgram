@@ -1,0 +1,11 @@
+{
+  "file": "pose_landmarker_full.task",
+  "sha256": "5134a3aad27a58b93da0088d431f366da362b44e3ccfbe3462b3827a839011b1",
+  "size_bytes": 9398198,
+  "url": "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task",
+  "license": "Apache-2.0",
+  "license_evidence": "https://github.com/google-ai-edge/mediapipe/issues/6306",
+  "license_evidence_date": "2026-06-10",
+  "sdk_version": "1.1.1",
+  "variant": "full_float16_v1"
+}
