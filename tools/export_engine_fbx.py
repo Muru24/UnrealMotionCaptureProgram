@@ -9,6 +9,9 @@ def run(source,out):
     out.mkdir(exist_ok=False)
     bpy.ops.wm.open_mainfile(filepath=str(source))
     scene=bpy.context.scene;arm=bpy.data.objects['MotionSkeleton'];mesh=bpy.data.objects['BoneProxy']
+    if bpy.data.objects.get('FingerProxy') is not None:
+        bpy.ops.object.select_all(action='DESELECT');mesh.select_set(True);bpy.data.objects['FingerProxy'].select_set(True)
+        bpy.context.view_layer.objects.active=mesh;bpy.ops.object.join()
     fps=float(animation['fps']);factor=30/fps
     # Integer sampling rate avoids fractional-frame FBX import ambiguity in game engines.
     for layer in arm.animation_data.action.layers:
@@ -49,6 +52,7 @@ def run(source,out):
         'fbx_duration_seconds':(scene.frame_end-1)/30,'bones':len(arm.data.bones),
         'missing_pose_frames':len(animation['frames'])-animation['frames_with_pose'],
         'missing_spans':animation.get('orientation_policy',{}).get('missing_spans',[]),
+        'finger_policy':animation.get('finger_policy'),
         'limits':['reference_rig_not_target_retarget','missing_pose_uses_parent_rest_fallback_not_reconstruction',
                   'fbx_has_no_validity_flags_consult_source_animation_json','unity_import_not_verified']}
     (out/'export.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')

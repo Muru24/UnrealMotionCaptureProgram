@@ -23,11 +23,24 @@ models/**/download-manifest.json
 *.pem
 *.key
 
-# Reproducible validation outputs; retain validation scripts
+# Historical experiments stay local. Retain only regression-test helper sources.
 /validation/*
-!/validation/*.py
+!/validation/sam2/
+/validation/sam2/*
+!/validation/sam2/candidate_geometry.py
+!/validation/sam2/candidate_ranking.py
+!/validation/sam2/knee_anchors.py
+!/validation/sam2/shoe_leg_geometry.py
+!/validation/sam2/leg_flow_guard.py
+!/validation/sam2/boot_evidence.py
+!/validation/sam2/temporal_leg_path.py
 /transfer/
 /진행상황/
+/MVP요약/
+/계획서 수정/
+/.maintenance-tests/
+/assets/user_models/
+/assets/builtin_models/
 
 # Keep only runtime vendor sources; never environments or authentication files
 !/.validation/
@@ -54,3 +67,7 @@ models/**/download-manifest.json
 *.log
 *.tmp
 *.blend1
+
+# Keep template characters, not generated retargeting experiments.
+/UnrealProjects/MotionCheckUE58/Content/*
+!/UnrealProjects/MotionCheckUE58/Content/Characters/

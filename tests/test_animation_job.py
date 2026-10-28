@@ -109,13 +109,13 @@ def test_gui_animation_export_wires_current_result_and_busy_state(tmp_path,monke
     try:
         app.result_dir=folder
         app.video_count=4
-        assert app.animation_button.cget('text')=='Blender 애니메이션 저장'
+        assert not hasattr(app,'animation_button')
         app.generate_animation();assert app.busy
-        assert str(app.animation_button.cget('state'))=='disabled'
+        assert str(app.cancel_button.cget('state'))=='normal'
         pump(root,lambda:not app.busy)
         assert calls==[folder/'motion/motion.json']
         assert str(target) in app.status_text.get()
-        assert str(app.animation_button.cget('state'))=='normal'
+        assert str(app.cancel_button.cget('state'))=='disabled'
         assert app.skeleton_panel.points.shape==(4,22,3)
         assert 'SLERP' in app.skeleton_panel.label.cget('text')
     finally:app.stop_video();root.destroy()

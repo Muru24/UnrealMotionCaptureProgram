@@ -8,14 +8,21 @@ import numpy as np
 class SkeletonPanel(ttk.Frame):
     def __init__(self,parent,convert_command):
         super().__init__(parent);self.points=None;self.parents=[];self.names=[];self.position=0
+        self.fps=None;self.empty_message='본 데이터 없음 · 1번에서 전체 추출하면 자동 생성됩니다'
         self.yaw=-25.;self.pitch=12.;self.zoom=1.;self.drag=None;self.loaded_path=None
         self.columnconfigure(0,weight=1);self.rowconfigure(1,weight=1)
         bar=ttk.Frame(self);bar.grid(row=0,column=0,sticky='ew')
-        ttk.Label(bar,text='표준 스켈레톤 · 3D',font=('맑은 고딕',10,'bold')).pack(side='left')
-        self.convert_button=ttk.Button(bar,text='변환',width=5,command=convert_command)
-        self.convert_button.pack(side='right')
-        for text,yaw in (('정면',0),('측면',90)):
-            ttk.Button(bar,text=text,width=5,command=lambda a=yaw:self.view(a)).pack(side='right')
+        bar.columnconfigure(0,weight=1)
+        ttk.Label(bar,text='본 애니메이션 · 3D',font=('맑은 고딕',10,'bold')).grid(row=0,column=0,sticky='w',pady=(0,7))
+        controls=ttk.Frame(bar);controls.grid(row=1,column=0,sticky='ew')
+        for i,(text,yaw) in enumerate((('정면',0),('측면',90))):
+            controls.columnconfigure(i,weight=1)
+            ttk.Button(controls,text=text,width=5,command=lambda a=yaw:self.view(a)).grid(row=0,column=i,sticky='ew',padx=(0,5))
+        controls.columnconfigure(2,weight=1)
+        self.convert_button=None
+        if convert_command is not None:
+            self.convert_button=ttk.Button(controls,text='변환',width=5,command=convert_command)
+            self.convert_button.grid(row=0,column=2,sticky='ew')
         self.canvas=tk.Canvas(self,bg='#080d14',highlightthickness=0)
         self.canvas.grid(row=1,column=0,sticky='nsew',pady=(8,0))
         self.label=ttk.Label(self,text='드래그: 회전 · 휠: 확대 · M3 위치 미리보기',foreground='#9bb0c9',wraplength=330)
@@ -26,18 +33,21 @@ class SkeletonPanel(ttk.Frame):
         self.canvas.bind('<MouseWheel>',self.wheel)
 
     def clear(self,text='추출 결과를 열면 표시됩니다'):
-        self.points=None;self.loaded_path=None;self.label.configure(text=text);self.render()
+        self.points=None;self.loaded_path=None;self.fps=None;self.empty_message=text;self.label.configure(text=text);self.render()
 
     def load(self,path):
         key=(str(path),path.stat().st_mtime_ns,path.stat().st_size)
         if self.loaded_path==key:return
         data=json.loads(path.read_text(encoding='utf-8'))
         if data.get('schema')!='standard_motion_positions_v1':raise ValueError('Unknown standard motion schema.')
+        try:fps=float(data['video']['fps'])
+        except (KeyError,TypeError,ValueError) as exc:raise ValueError('Invalid skeleton frame rate.') from exc
+        if not np.isfinite(fps) or fps<=0:raise ValueError('Invalid skeleton frame rate.')
         bones=data['skeleton']['bones'];self.names=[b['name'] for b in bones]
         self.parents=[None if b['parent'] is None else self.names.index(b['parent']) for b in bones]
         points=np.asarray([[[np.nan]*3 if p is None else p for p in row['positions']] for row in data['frames']],dtype=np.float32)
         if points.shape!=(len(data['frames']),len(bones),3):raise ValueError('Invalid skeleton preview positions.')
-        self.points=points;self.loaded_path=key
+        self.points=points;self.loaded_path=key;self.fps=fps
         self.label.configure(text=f"입력: {data['source_kind']} · 고정 체형/제자리 · 드래그 회전/휠 확대")
         if data.get('correction'):
             text='영상·접지 결합 이동 추정 · 깊이는 모델 추정' if data.get('root_motion_kind')=='image_and_contact_estimate' else '접지 추정·SLERP 보정 · 루트 이동은 접지 제약 기반 추정'
@@ -45,6 +55,9 @@ class SkeletonPanel(ttk.Frame):
         self.render()
 
     def set_frame(self,index):self.position=index;self.render()
+
+    def set_time(self,seconds):
+        self.set_frame(round(seconds*self.fps) if self.fps else 0)
 
     def view(self,yaw):self.yaw=yaw;self.pitch=0.;self.render()
 
@@ -59,7 +72,7 @@ class SkeletonPanel(ttk.Frame):
     def render(self):
         self.canvas.delete('all');w=max(1,self.canvas.winfo_width());h=max(1,self.canvas.winfo_height())
         if self.points is None:
-            self.canvas.create_text(w/2,h/2,text='표준 스켈레톤 대기',fill='#7690ab');return
+            self.canvas.create_text(w/2,h/2,text=self.empty_message,fill='#7690ab',width=max(1,w-32),justify='center');return
         if not 0<=self.position<len(self.points):
             self.canvas.create_text(w/2,h/2,text='이 영상과 스켈레톤의 프레임 범위가 다릅니다',fill='#e8b365');return
         q=self.points[self.position];valid=np.isfinite(q).all(axis=1)

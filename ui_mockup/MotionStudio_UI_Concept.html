@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Motion Studio — UI Redesign Concept</title>
+<style>
+:root{color-scheme:dark;--bg:#080d13;--sidebar:#0b1119;--panel:#111a24;--panel2:#141f2b;--panel3:#172331;--line:#263545;--line2:#314456;--text:#edf4fc;--soft:#b3c2d2;--muted:#75889d;--accent:#7bb7ff;--a2:#447dec;--mint:#64dfc4;--violet:#bba9ff;--warn:#e9b775;--shadow:0 16px 48px #0003}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,"Pretendard","Segoe UI","맑은 고딕",sans-serif;font-size:13px;letter-spacing:-.02em}button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid #79b8ff;outline-offset:3px}svg{display:block}body{overflow-x:hidden}
+.app{min-height:100vh;display:grid;grid-template-columns:244px minmax(0,1fr);grid-template-rows:64px minmax(calc(100vh - 64px),auto)}
+.topbar{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:0 27px 0 23px;background:#0d141d;border-bottom:1px solid var(--line);z-index:5;position:sticky;top:0}
+.brand{display:flex;align-items:center;gap:12px;min-width:190px}.brandmark{width:34px;height:34px;border-radius:11px;background:linear-gradient(140deg,#588df9,#71d4e8);display:flex;align-items:center;justify-content:center;color:#08131f;box-shadow:0 0 24px #548ff73a}.brandmark svg{width:23px;height:23px}.brand .name{font-size:15px;font-weight:760;letter-spacing:-.035em}.brand small{display:block;color:var(--muted);font-size:9px;letter-spacing:.2em;margin-top:3px;font-weight:750}.top-breadcrumb{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;margin-right:auto;margin-left:26px}.top-breadcrumb b{color:var(--soft);font-weight:570}.top-actions{display:flex;align-items:center;gap:10px}.pill{border:1px solid var(--line);background:#111c27;color:var(--soft);padding:7px 11px;border-radius:30px;font-size:11px;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}.pill .pin{width:6px;height:6px;background:var(--mint);border-radius:50%;box-shadow:0 0 12px #64dfc498}.tb-btn{height:33px;padding:0 13px;border:1px solid var(--line);border-radius:9px;background:#18232e;color:var(--soft);font-size:12px}.tb-btn:hover{border-color:var(--accent);color:var(--text)}
+.sidebar{background:var(--sidebar);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;padding:23px 12px 20px;gap:10px;position:sticky;top:64px;height:calc(100vh - 64px)}
+.section-label{font-size:10px;color:#66809a;text-transform:uppercase;letter-spacing:.13em;font-weight:760;padding:0 13px;margin:11px 0 5px}
+.project-select{padding:12px 13px;background:linear-gradient(130deg,#152437,#141b28);border:1px solid #304258;border-radius:11px;display:flex;align-items:center;gap:10px}.project-icon{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:#213d62;color:var(--accent)}.project-select .project-name{font-weight:680;font-size:12px}.project-select .project-desc{font-size:10px;color:var(--muted);margin-top:5px}.project-select .chevron{margin-left:auto;color:var(--muted)}
+.side-step{border:1px solid transparent;display:flex;align-items:center;text-align:left;gap:12px;padding:12px 11px;width:100%;border-radius:10px;background:transparent;color:var(--muted);position:relative;min-height:63px;transition:background .15s,border-color .15s,color .15s}.side-step:hover{background:#18232e;color:var(--text)}.side-step.active{background:#152a43;border-color:#295883;color:#eaf5ff}.side-step.active:before{content:"";position:absolute;left:-13px;top:16px;bottom:16px;width:3px;border-radius:3px;background:#6db4ff}.step-n{width:31px;height:31px;display:grid;place-items:center;flex:none;border:1px solid #354454;border-radius:9px;font-family:Consolas,monospace;font-weight:740;color:#8da0b4}.active .step-n{background:#23517e;border-color:#498cd5;color:#c5e3ff}.side-step strong{font-size:12px;display:block;letter-spacing:-.02em}.side-step small{display:block;margin-top:5px;font-size:10px;color:#74889f}.side-step.active small{color:#8eafca}
+.side-separator{height:1px;background:var(--line);margin:14px 10px 3px}.recent{display:flex;flex-direction:column;gap:4px}.recent-row{display:flex;align-items:center;gap:9px;padding:10px 13px;color:#8397ae;border-radius:8px;border:0;background:transparent;text-align:left;width:100%;font-size:11px;min-width:0}.recent-row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.recent-row:hover{background:#182330;color:#e5f3ff}.recent-row.active{color:#d2e9ff}.recent-dot{width:8px;height:8px;flex:none;border:1px solid #8198ab;border-radius:3px}.recent-row.active .recent-dot{border-color:#75b8ff;background:#75b8ff}
+.side-bottom{margin-top:auto;padding:0 10px}.side-bottom .local{border:1px solid #253848;border-radius:10px;background:#111d27;padding:13px;display:flex;gap:10px;align-items:flex-start}.local-ic{color:var(--mint);margin-top:1px}.local strong{font-size:11px;font-weight:720}.local p{color:var(--muted);font-size:10px;line-height:1.5;margin:5px 0 0}.sidebar-version{color:#506276;font-size:9px;letter-spacing:.16em;margin-top:17px;padding-left:3px}
+.main{min-width:0;padding:32px clamp(20px,3vw,47px) 30px;background:radial-gradient(ellipse at 60% -30%,#15304a4f,transparent 60%),var(--bg)}
+.kicker{display:flex;align-items:center;gap:9px;color:var(--accent);font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}.kicker:before{content:"";height:6px;width:6px;border-radius:50%;background:var(--accent)}.hero{display:flex;justify-content:space-between;align-items:center;gap:22px;margin-bottom:26px}.hero h1{font-size:clamp(25px,2.4vw,36px);font-weight:750;letter-spacing:-.06em;line-height:1.2;margin:11px 0 10px}.hero p{color:#8fa4b8;margin:0;font-size:13px;line-height:1.6}.hero-side{text-align:right}.demo-tag{display:inline-flex;align-items:center;gap:6px;border:1px solid #475372;background:#242b43;border-radius:7px;color:#d0c7ff;padding:7px 10px;font-size:10px;font-weight:700;letter-spacing:.02em}.last-save{font-size:10px;color:var(--muted);margin-top:9px}
+.pipeline{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 20px}.pipeline button{display:flex;align-items:center;gap:10px;justify-content:flex-start;width:100%;padding:11px 13px;border:1px solid var(--line);background:#101822;color:#6f849a;border-radius:10px;text-align:left;min-width:0}.pipeline button span{width:25px;height:25px;flex:none;display:grid;place-items:center;border:1px solid #334253;border-radius:8px;font-size:10px;font-weight:740}.pipeline button b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:650;font-size:11px}.pipeline button.active{border-color:#4679ad;background:#162941;color:#d5ebff}.pipeline button.active span{border-color:#67aaff;color:#8dc6ff}.pipeline button.completed span{background:#163a37;color:#65dcc2;border-color:#35746b}.pipeline button:hover{border-color:#4a647f}
+.stage-view{display:none}.stage-view.active{display:block;animation:enter .2s ease-out}@keyframes enter{from{opacity:.7;transform:translateY(5px)}to{opacity:1;transform:none}}
+.workspace-grid{display:grid;grid-template-columns:minmax(0,1fr) 316px;align-items:start;gap:16px}.column{min-width:0;display:flex;flex-direction:column;gap:16px}.panel{border:1px solid var(--line);background:var(--panel);border-radius:13px;overflow:hidden;min-width:0}.panel-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 19px;border-bottom:1px solid #223141}.panel-header h2{font-size:13px;margin:0;font-weight:720;letter-spacing:-.025em}.panel-header p{font-size:10px;margin:5px 0 0;color:var(--muted);font-weight:400}.panel-header .right{display:flex;align-items:center;gap:8px}.panel-body{padding:18px 19px}.chip{display:inline-flex;align-items:center;gap:7px;font-size:10px;color:#9eb6c9;border:1px solid #2c4154;background:#162535;border-radius:6px;padding:6px 8px;font-weight:620}.chip.blue{color:#abd6ff;border-color:#355b81;background:#172d44}.chip.mint{color:#84ebd5;border-color:#315e59;background:#153530}
+.icon-btn{border:1px solid var(--line);background:#1a2735;color:#9fb4c8;border-radius:8px;width:32px;height:30px;display:grid;place-items:center}.icon-btn:hover{color:white;border-color:#47759e}.icon-btn svg{width:14px;height:14px}
+.preview-area{padding:12px;background:#0d151e}.dual-viewport{display:grid;grid-template-columns:1fr 1fr;gap:10px}.viewport{position:relative;aspect-ratio:1.38;background:radial-gradient(ellipse at 50% 80%,#1b3850 0%,#0d1928 48%,#0a141f 78%);border:1px solid #2a3e52;border-radius:9px;overflow:hidden;min-height:205px}.viewport:before{content:"";position:absolute;inset:0;opacity:.38;background-image:linear-gradient(#31506920 1px,transparent 1px),linear-gradient(90deg,#31506920 1px,transparent 1px);background-size:25px 25px;pointer-events:none}.viewport .view-label{position:absolute;z-index:2;top:12px;left:12px;background:#0c1622bb;border:1px solid #395069a3;border-radius:6px;padding:5px 8px;color:#a7bbd0;font-size:10px;font-weight:720;letter-spacing:.05em}.viewport .view-corner{position:absolute;right:12px;bottom:10px;color:#7d91a3;font-family:Consolas,monospace;font-size:10px}.viewport-art{width:100%;height:100%;object-fit:contain;position:absolute;inset:0}.viewport .fig{height:100%;width:100%}.viewport .gridfloor{opacity:.55}.viewport .lines{fill:none;stroke:#9edcfb;stroke-width:5;stroke-linejoin:round;stroke-linecap:round}.viewport .nodes{fill:#d7f4ff;stroke:#3b9dd9;stroke-width:2}.viewport.tracked .lines{stroke:#75d9d2}.viewport.tracked .nodes{fill:#a6fae8;stroke:#226c74}.viewport .ghost{stroke:#42729066;stroke-width:32;stroke-linejoin:round;stroke-linecap:round;fill:none}.viewport .headshape{fill:#263c52;stroke:#6d99bb;stroke-width:3}.viewport.tracked .ghost{opacity:.25}.viewport.tracked .headshape{fill:#1b3e4c;stroke:#5caaaf}.frame-vector{animation:sway 3s ease-in-out infinite;transform-origin:50% 68%}.playing .frame-vector{animation-duration:.8s}@keyframes sway{0%,100%{transform:rotate(-2deg) translateY(0)}50%{transform:rotate(2deg) translateY(5px)}}
+#sourceVideo{display:none;width:100%;height:100%;object-fit:contain;position:absolute;inset:0;background:#03080d;z-index:1}.video-loaded #sourceVideo{display:block}.video-loaded #sourceArt{display:none}.video-loaded #sourceHelp{display:none}.sourceHelp{position:absolute;z-index:2;bottom:12px;left:12px;color:#9cb1c5;font-size:10px;max-width:65%;line-height:1.4}
+.playbar{display:flex;align-items:center;gap:12px;padding:13px 18px 15px;background:#101a24;border-top:1px solid #263747}.playbtn{border:1px solid #365a7e;background:#213b57;border-radius:8px;color:#afd9ff;width:33px;height:32px;display:grid;place-items:center;font-size:12px;flex:none}.playbtn:hover{background:#315779}.seek{width:100%;accent-color:#77b7fa;cursor:pointer}.time{font-size:11px;color:#9aafc3;font-family:Consolas,monospace;white-space:nowrap}.time b{color:#e7f1fc;font-weight:600}.playbar .divide{height:20px;width:1px;background:#334658}
+.field-label{display:flex;align-items:center;justify-content:space-between;gap:7px;color:#c0d1e3;font-size:11px;font-weight:650;margin:0 0 10px}.tiny-hint{font-size:10px;color:#6e859b;font-weight:460}.field-section{margin-top:21px}.field-section:first-child{margin-top:0}.dropzone{border:1px dashed #456382;background:#111f2c;border-radius:10px;padding:18px 12px;display:flex;align-items:center;gap:13px;cursor:pointer;transition:.15s}.dropzone:hover,.dropzone.dragover{border-color:#75b8ff;background:#182d41}.drop-icon{width:37px;height:37px;flex:none;display:grid;place-items:center;background:#223b54;border:1px solid #3f5975;border-radius:11px;font-size:17px;color:#9bd3ff}.dropzone strong{display:block;font-size:11px;color:#dcefff;max-width:205px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dropzone small{display:block;margin-top:5px;font-size:10px;color:#6f90a9}.seg{display:grid;grid-template-columns:1fr 1fr;gap:5px;background:#0d1721;border:1px solid #273a4d;padding:4px;border-radius:9px}.seg button{padding:9px 10px;color:#7890a7;background:transparent;border:0;border-radius:6px;font-size:11px}.seg button.active{background:#294965;color:#e0f2ff;box-shadow:0 2px 12px #0004;font-weight:720}
+.select{height:37px;appearance:none;display:block;width:100%;border:1px solid #364c61;border-radius:8px;background:#192736;color:#cddfec;padding:0 34px 0 12px;background-image:linear-gradient(45deg,transparent 50%,#87a3ba 50%),linear-gradient(135deg,#87a3ba 50%,transparent 50%);background-position:calc(100% - 18px) 16px,calc(100% - 13px) 16px;background-size:5px 5px;background-repeat:no-repeat;font-size:11px}.select:disabled{opacity:.6}.setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:13px 0;color:#a7bbcc;font-size:11px}.setting-row strong{color:#e1eef9;font-weight:660}.switch{border:0;border-radius:20px;background:#35485a;width:33px;height:19px;padding:3px;flex:none}.switch:after{content:"";display:block;width:13px;height:13px;border-radius:50%;background:#a5b4c4;transition:.15s}.switch.on{background:#376db3}.switch.on:after{background:#eff7ff;transform:translateX(14px)}
+.btn{display:inline-flex;justify-content:center;align-items:center;gap:8px;border-radius:8px;min-height:38px;padding:10px 13px;font-weight:700;font-size:11px;border:1px solid #36516b;color:#c5dbef;background:#1b2a39}.btn:hover{background:#253d52;border-color:#5588b6}.btn.primary{color:#081321;border:1px solid #9dcbff;background:linear-gradient(135deg,#91c6ff,#5b9cf4);box-shadow:0 4px 20px #447aea29}.btn.primary:hover{filter:brightness(1.12)}.btn:disabled{opacity:.55;cursor:not-allowed}.btn.full{width:100%}.btn.ghost{background:#101b27;border-color:#2b4054}.btn.small{min-height:29px;padding:7px 10px}
+.tip{font-size:10px;line-height:1.6;color:#8c9fb1}.divider{border:0;height:1px;background:#293746;margin:18px 0}.metric-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.metric{background:#121e2a;border:1px solid #28394b;padding:15px;border-radius:9px}.metric strong{font-size:19px;font-family:Consolas,monospace;letter-spacing:-.06em}.metric small{display:block;color:#8197ab;margin-top:7px;font-size:10px}.metric strong i{font-size:10px;font-style:normal;color:#91a7bd;margin-left:3px}.tracker-steps{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.tracker-steps span{display:flex;align-items:center;gap:7px;color:#7d95ac;font-size:10px}.tracker-steps span:before{content:"";width:7px;height:7px;border-radius:50%;background:#35495b;border:1px solid #536779}.tracker-steps span.done:before{background:var(--mint);border-color:var(--mint)}.tracker-steps span.now{color:#b0d7ff}.tracker-steps span.now:before{background:var(--accent);border-color:var(--accent);box-shadow:0 0 10px #5eaaff66}
+.activity{padding:17px 19px}.activity-title{display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:680}.activity small{color:var(--muted);font-weight:400;font-size:10px}.progress-track{height:5px;background:#1c2c3c;border-radius:7px;margin:14px 0 10px;overflow:hidden}.progress-fill{height:100%;width:0%;background:linear-gradient(90deg,#62a1f4,#65ddc4);border-radius:7px;transition:width .16s}.activity-line{display:flex;align-items:center;justify-content:space-between;color:#879db1;font-size:10px}.activity-line b{color:#afd8fd}
+.library-entry{display:flex;align-items:center;gap:11px;border:1px solid #28394a;background:#142231;border-radius:8px;padding:11px;margin-bottom:8px}.library-entry .file-ic{color:#82b7e5;background:#1d3952;width:30px;height:30px;border-radius:7px;display:grid;place-items:center;font-size:12px;flex:none}.library-entry .file-name{font-size:11px;font-weight:680}.library-entry .file-desc{margin-top:5px;font-size:10px;color:#7990a7}.library-entry .file-tag{font-size:9px;color:#66d7c3;margin-left:auto}
+.notice{margin-top:15px;color:#8396a8;font-size:10px;line-height:1.55}.footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid #223343;padding-top:20px;margin-top:24px;color:#70869b;font-size:10px}.footer .version{font-family:Consolas,monospace;letter-spacing:.06em}.footer .ok{color:#6ed4bb}
+.skeleton-grid,.retarget-grid,.editor-grid{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:16px;align-items:start}.skeleton-large{min-height:390px;background:radial-gradient(circle at 50% 70%,#14394a,#091722 68%);border:1px solid #284456;border-radius:8px;position:relative;overflow:hidden}.skeleton-large:before{content:"";position:absolute;inset:0;background:linear-gradient(#2c46651e 1px,transparent 1px),linear-gradient(90deg,#2c46651e 1px,transparent 1px);background-size:26px 26px}.skeleton-large svg{height:370px;width:100%;position:relative;z-index:1}.viewport-overlay{position:absolute;left:13px;top:13px;z-index:2;display:flex;gap:6px}.viewport-overlay button{background:#112334e8;border:1px solid #375168;color:#89a9bf;padding:6px 9px;border-radius:6px;font-size:10px}.viewport-overlay button.active{color:#d6ecff;background:#264668;border-color:#5380ac}.orbit-label{position:absolute;right:13px;bottom:13px;z-index:2;color:#7b98ab;font-family:Consolas,monospace;font-size:10px}.skeleton-large.side svg .frame-vector{transform:scaleX(.48) skewY(-5deg);transform-origin:50% 50%}.skeleton-large.front svg .frame-vector{transform:scaleX(1.05);transform-origin:50% 50%}
+.bone-tree{max-height:335px;overflow:auto}.bone-row{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;border-left:2px solid transparent;color:#9cb2c7;border-bottom:1px solid #223242;font-size:11px;cursor:pointer}.bone-row span:before{content:"◦";color:#7499bc;margin-right:9px}.bone-row:hover{background:#172d41}.bone-row.active{background:#1b3147;border-left-color:#69b0f2;color:#dcf1ff}.bone-row small{color:#718ba1;font-family:Consolas,monospace;font-size:10px}.axis{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.axis label{color:#8ca0b5;font-size:10px}.axis input{width:100%;height:33px;background:#101e2b;border:1px solid #2d4457;border-radius:6px;margin-top:6px;color:#bed4e8;padding:0 8px;font-family:Consolas,monospace;font-size:11px}
+.compare-view{display:grid;grid-template-columns:1fr 1fr;gap:11px}.compare-view .skeleton-large{min-height:320px}.compare-view .skeleton-large svg{height:300px}.rig-badge{position:absolute;z-index:2;left:12px;bottom:12px;background:#0a1521da;border:1px solid #315169;color:#adcee6;padding:5px 8px;border-radius:5px;font-size:10px}.mapping{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid #283b4c;color:#adc3d5;font-size:11px}.mapping:last-child{border-bottom:0}.mapping span{font-size:10px;color:#67d1b7}.mapping em{font-style:normal;color:#7994aa}.timeline{background:#101c28;border-top:1px solid #293b4b;padding:12px 17px 17px}.timeline-tools{display:flex;align-items:center;gap:9px;margin-bottom:12px}.timeline-tools b{font-size:11px;margin-right:auto}.timeline-range{width:100%;accent-color:#78b8fa}.timeline-ruler{display:flex;justify-content:space-between;color:#6f8ba1;font:10px Consolas,monospace;padding:6px 0}.track{display:grid;grid-template-columns:105px 1fr;align-items:center;gap:12px;margin-top:9px}.track .track-label{font-size:10px;color:#91a8bf}.track .track-line{height:27px;background:repeating-linear-gradient(90deg,#1e3345 0,#1e3345 1px,transparent 1px,transparent 10%),#0d1b29;border:1px solid #2b4055;border-radius:4px;position:relative}.track .track-line:before{content:"";position:absolute;top:10px;left:7%;height:6px;right:14%;background:#385e80;border-radius:3px;opacity:.35}.key{position:absolute;top:7px;width:11px;height:11px;background:#80c1ff;transform:translateX(-50%) rotate(45deg);border:2px solid #234363;cursor:pointer}.track:nth-child(odd) .key{background:#8fdac8}.editor-inspector .field-section{margin-top:14px}
+kbd{padding:3px 5px;background:#1b2c39;border:1px solid #354657;border-radius:4px;color:#a4b7c8;font:10px Consolas,monospace}.toast{position:fixed;bottom:24px;right:25px;max-width:390px;z-index:99;display:flex;gap:12px;padding:15px 17px;background:#1c3041;border:1px solid #5680a4;border-radius:10px;box-shadow:var(--shadow);color:#d5ecff;font-size:12px;line-height:1.5;opacity:0;transform:translateY(8px);pointer-events:none;transition:.2s}.toast.show{opacity:1;transform:none}.modal-back{position:fixed;inset:0;background:#02070ac9;z-index:100;display:none;align-items:center;justify-content:center;padding:20px}.modal-back.open{display:flex}.modal{width:min(530px,95vw);background:#142331;border:1px solid #3d5266;border-radius:15px;box-shadow:0 30px 130px #0008;padding:26px}.modal h3{font-size:18px;margin:0 0 15px}.modal p,.modal li{font-size:12px;color:#9ab0c5;line-height:1.9}.modal ul{padding-left:17px}.modal .actions{display:flex;justify-content:flex-end;margin-top:22px}
+@media(max-width:1260px){.app{grid-template-columns:200px minmax(0,1fr)}.top-breadcrumb{margin-left:0}.sidebar{padding-left:9px;padding-right:9px}.side-step{gap:9px;padding:10px 8px}.main{padding:25px 19px}.workspace-grid,.skeleton-grid,.retarget-grid,.editor-grid{grid-template-columns:minmax(0,1fr) 275px}.viewport{min-height:160px}.brand{min-width:180px}}
+@media(max-width:990px){.app{grid-template-columns:75px minmax(0,1fr)}.sidebar .section-label,.sidebar .project-select,.sidebar .side-separator,.sidebar .recent,.sidebar .side-bottom,.sidebar-version,.side-step .step-text{display:none}.sidebar{align-items:center;padding:20px 8px}.side-step{justify-content:center;padding:10px;width:55px;min-height:54px}.side-step.active:before{left:-9px}.step-n{width:34px;height:34px}.workspace-grid,.skeleton-grid,.retarget-grid,.editor-grid{grid-template-columns:minmax(0,1fr) 290px}.top-breadcrumb{display:none}}
+@media(max-width:780px){.topbar{padding:0 14px}.brand{min-width:0}.top-actions .pill{display:none}.main{padding:20px 13px}.workspace-grid,.skeleton-grid,.retarget-grid,.editor-grid{grid-template-columns:1fr}.hero{align-items:start}.hero-side{display:none}.pipeline{gap:5px}.pipeline button{padding:8px 6px;justify-content:center}.pipeline button b{display:none}.dual-viewport{grid-template-columns:1fr 1fr}.viewport{min-height:120px}.metric-row{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:515px){.app{grid-template-columns:53px minmax(0,1fr)}.brand .name,.brand small{display:none}.sidebar{padding:14px 3px}.side-step{width:42px}.step-n{width:30px;height:30px}.main{padding:17px 10px}.dual-viewport,.compare-view{grid-template-columns:1fr}.viewport{min-height:170px}.hero h1{font-size:24px}.metric strong{font-size:16px}.metric{padding:10px}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" aria-hidden="true" style="position:absolute;overflow:hidden">
+<symbol id="brandmark" viewBox="0 0 32 32"><path d="M3 20V12m6 13V7m6 21V4m6 21V7m6 13V12" stroke="currentColor" stroke-width="3.3" stroke-linecap="round"/></symbol>
+<symbol id="figure" viewBox="0 0 520 350">
+<g class="gridfloor" stroke="#3c6986" fill="none"><path d="M100 306H420M135 283H385M170 262H350M260 242V335M220 245L146 339M300 245L374 339" stroke-width="1"/><ellipse cx="260" cy="301" rx="82" ry="15" fill="#254a62" stroke="none" opacity=".27"/></g>
+<g class="frame-vector">
+<g class="ghost" fill="none" stroke="#52718e" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"><path d="M260 132L260 207L245 243L216 302M260 207L282 247L310 305M260 144L217 150L184 207L163 239M260 144L301 155L337 205L364 221"/></g>
+<ellipse class="headshape" cx="260" cy="95" rx="27" ry="31" fill="#30495f" stroke="#84bcdf" stroke-width="3"/><path d="M241 132Q260 125 279 132L287 205Q263 219 237 205Z" fill="#20364c" stroke="#6588aa" stroke-width="2" opacity=".85"/>
+<g class="lines" fill="none" stroke="#8ed9ff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M260 126V166L260 208L245 244L216 302M260 208L282 246L310 305M260 146L216 152L184 207L163 239M260 146L300 154L337 205L364 221"/></g>
+<g class="nodes" fill="#def7ff" stroke="#4ba3db" stroke-width="2"><circle cx="260" cy="95" r="5"/><circle cx="260" cy="126" r="5"/><circle cx="260" cy="165" r="5"/><circle cx="260" cy="208" r="6"/><circle cx="216" cy="152" r="6"/><circle cx="300" cy="154" r="6"/><circle cx="184" cy="207" r="5"/><circle cx="337" cy="205" r="5"/><circle cx="163" cy="239" r="5"/><circle cx="364" cy="221" r="5"/><circle cx="245" cy="244" r="6"/><circle cx="282" cy="246" r="6"/><circle cx="216" cy="302" r="5"/><circle cx="310" cy="305" r="5"/></g>
+<g fill="#8ec4e9" opacity=".8" font-family="Consolas,monospace" font-size="11"><text x="312" y="141">L_ARM</text><text x="373" y="209">0.98</text><text x="298" y="275">0.96</text></g>
+</g>
+</symbol>
+</svg>
+<div class="app">
+<header class="topbar">
+  <div class="brand"><div class="brandmark"><svg><use href="#brandmark"/></svg></div><div><div class="name">Motion Studio</div><small>CAPTURE / RETARGET / EDIT</small></div></div>
+  <div class="top-breadcrumb"><span>WORKSPACE</span><span>›</span><b>Local Project</b><span>›</span><b id="crumbName">New Capture</b></div>
+  <div class="top-actions"><span class="pill"><span class="pin"></span> LOCAL · OFFLINE UI</span><button class="tb-btn" id="helpBtn">사용 안내　?</button></div>
+</header>
+<aside class="sidebar">
+ <div class="section-label">ACTIVE PROJECT</div>
+ <div class="project-select"><div class="project-icon">◇</div><div><div class="project-name" id="projectName">New Capture</div><div class="project-desc">Private workspace</div></div><span class="chevron">⌄</span></div>
+ <div class="section-label">WORKFLOW</div>
+ <button class="side-step active" data-stage="0"><span class="step-n">01</span><span class="step-text"><strong>영상 트래킹</strong><small>Video → Motion</small></span></button>
+ <button class="side-step" data-stage="1"><span class="step-n">02</span><span class="step-text"><strong>스켈레톤 생성</strong><small>3D Skeleton Review</small></span></button>
+ <button class="side-step" data-stage="2"><span class="step-n">03</span><span class="step-text"><strong>모델 적용</strong><small>Retarget & Export</small></span></button>
+ <button class="side-step" data-stage="3"><span class="step-n">04</span><span class="step-text"><strong>애니메이션 편집</strong><small>Timeline & Keyframe</small></span></button>
+ <div class="side-separator"></div>
+ <div class="section-label">RECENT RESULTS · DEMO</div>
+ <div class="recent"><button class="recent-row active" data-project="Sword Practice"><span class="recent-dot"></span><span>Sword Practice</span></button><button class="recent-row" data-project="Walk Cycle"><span class="recent-dot"></span><span>Walk Cycle</span></button><button class="recent-row" data-project="Character Pose"><span class="recent-dot"></span><span>Character Pose</span></button></div>
+ <div class="side-bottom"><div class="local"><div class="local-ic">●</div><div><strong>로컬 디자인 컨셉</strong><p>실제 추론은 연결되지 않았습니다. 파일은 브라우저에서만 미리 봅니다.</p></div></div><div class="sidebar-version">MOTION STUDIO / UI CONCEPT 01</div></div>
+</aside>
+<main class="main">
+ <div class="hero"><div><div class="kicker" id="heroKicker">01 / MOTION TRACKING</div><h1 id="heroTitle">영상에서 움직임 추출하기</h1><p id="heroDesc">영상 가져오기부터 모션 분석까지. 핵심 단계만 남긴 단순한 워크플로.</p></div><div class="hero-side"><span class="demo-tag">◇　INTERACTIVE UI MOCKUP</span><div class="last-save">기존 Python 앱과 연결되지 않은 HTML 시안</div></div></div>
+ <div class="pipeline">
+  <button data-stage="0" class="active"><span>01</span><b>영상 입력 · 트래킹</b></button>
+  <button data-stage="1"><span>02</span><b>스켈레톤 검수</b></button>
+  <button data-stage="2"><span>03</span><b>리타게팅 · 출력</b></button>
+  <button data-stage="3"><span>04</span><b>타임라인 편집</b></button>
+ </div>
+<style>
+.viewport.source-fallback .lines,.viewport.source-fallback .nodes{opacity:.12}.viewport.source-fallback .ghost{stroke:#8397ac;opacity:.75}.viewport.source-fallback .headshape{fill:#46596e;stroke:#889bb1}.viewport.source-fallback .view-corner{color:#a4bdcf}
+</style>
+<!-- 01: Import and Tracking -->
+<section class="stage-view active" id="stage-0">
+ <div class="workspace-grid">
+  <div class="column">
+   <section class="panel">
+    <div class="panel-header"><div><h2>실시간 작업 미리보기</h2><p>원본 영상과 관절 추출 결과를 나란히 비교합니다.</p></div><div class="right"><span class="chip blue">●　2-UP VIEW</span><button class="icon-btn" title="재생/일시정지 (Space)" id="previewControl">▷</button></div></div>
+    <div class="preview-area">
+     <div class="dual-viewport" id="playSurface">
+       <div class="viewport source-fallback" id="sourceViewport"><span class="view-label">SOURCE / VIDEO</span>
+         <svg class="viewport-art" id="sourceArt" viewBox="0 0 520 350" aria-hidden="true"><use href="#figure"/></svg>
+         <video id="sourceVideo" preload="metadata" playsinline></video><div id="sourceHelp" class="sourceHelp">샘플 일러스트 · 파일을 넣으면 실제 영상 미리보기로 전환</div>
+         <span class="view-corner" id="clipSource">00:00:00:00</span>
+       </div>
+       <div class="viewport tracked"><span class="view-label">MOTION / DEMO RIG</span><svg class="viewport-art" viewBox="0 0 520 350"><use href="#figure"/></svg><span class="view-corner">22 JOINTS　/　DEMO</span></div>
+     </div>
+    </div>
+    <div class="playbar"><button class="playbtn" id="playBtn" aria-label="재생">▶</button><span class="time"><b id="currentTime">00:00</b> / <span id="totalTime">00:12</span></span><input type="range" class="seek" id="seekBar" min="0" max="1000" value="220" aria-label="재생 위치"><span class="divide"></span><span class="chip">30 FPS</span></div>
+   </section>
+   <section class="panel"><div class="panel-header"><div><h2>모션 분석 요약</h2><p>설계 검토용 샘플 표시 · 실제 분석 결과가 아닙니다.</p></div><span class="chip">DEMO DATA</span></div><div class="panel-body">
+    <div class="metric-row"><div class="metric"><strong>22<i>joints</i></strong><small>표준 관절 구조</small></div><div class="metric"><strong>3D</strong><small>신체 포즈 추정</small></div><div class="metric"><strong>30<i>fps</i></strong><small>샘플 클립 재생률</small></div></div>
+    <hr class="divider"><div class="tracker-steps"><span class="done">영상 준비</span><span class="now">인물 추적</span><span>3D 본 생성</span><span>모델 적용</span></div>
+   </div></section>
+   <section class="panel"><div class="panel-header"><div><h2>작업 로그</h2><p>처리 단계별 진행 상황을 명확히 보여줍니다.</p></div><span class="chip">PROCESS MONITOR</span></div><div class="panel-body" style="padding-top:15px"><div style="font:11px Consolas,monospace;color:#94adc2;line-height:2.05" id="consoleLog"><div><span style="color:#6bcdb6">●</span>　Ready. Waiting for a local video file.</div><div><span style="color:#7298ba">↳</span>　Renderer: Interactive HTML mockup (no inference backend).</div></div></div></section>
+  </div>
+  <div class="column">
+   <section class="panel">
+    <div class="panel-header"><div><h2>트래킹 설정</h2><p>INPUT / DETECTION</p></div><span class="chip mint">LOCAL</span></div>
+    <div class="panel-body">
+     <div class="field-section"><div class="field-label">01　영상 소스<span class="tiny-hint">MP4 · MOV · WEBM</span></div><div class="dropzone" id="dropZone" tabindex="0" role="button" aria-label="영상 파일 열기"><span class="drop-icon">⇧</span><div><strong id="inputFilename">영상을 선택하거나 드래그하세요</strong><small id="inputDetail">클릭하여 로컬 영상 찾아보기</small></div></div><input type="file" id="videoInput" accept="video/mp4,video/quicktime,video/webm,video/*" hidden></div>
+     <div class="field-section"><div class="field-label">02　인물 선택 방식</div><div class="seg" id="targetMode"><button class="active" data-mode="auto">자동 선택</button><button data-mode="manual">직접 선택</button></div><p class="tip" id="targetDescription" style="margin:9px 0 0">가장 중심에 있는 인물을 대상으로 가정합니다. 이 설정은 목업입니다.</p></div>
+     <div class="field-section"><div class="field-label">03　추정 파이프라인</div><select class="select" aria-label="트래킹 방식"><option>SAM 3D + SAM 2 · 기존 기본 워크플로</option><option>품질 우선 · UI 구상</option><option>고속 미리보기 · UI 구상</option></select></div>
+     <div class="field-section"><div class="field-label">04　후처리 옵션</div><div class="setting-row"><span>손가락 데이터 정제</span><button class="switch on" aria-label="손가락 데이터 정제 토글" aria-pressed="true"></button></div><div class="setting-row"><span>보정 결과 동시 미리보기</span><button class="switch on" aria-label="동시 미리보기 토글" aria-pressed="true"></button></div><div class="setting-row"><span>추출 후 결과 자동 저장</span><button class="switch on" aria-label="자동 저장 토글" aria-pressed="true"></button></div></div>
+     <hr class="divider"><button class="btn primary full" id="runDemo">▶　트래킹 과정 시뮬레이션</button><p class="tip" style="margin:9px 0 0">이 버튼은 진행 UI만 시연합니다. 실제 SAM 분석이나 파일 출력은 하지 않습니다.</p>
+    </div>
+   </section>
+   <section class="panel"><div class="activity"><div class="activity-title"><span id="statusLabel">●　작업 대기 중</span><small id="statusPercent">0%</small></div><div class="progress-track"><div class="progress-fill" id="progressFill"></div></div><div class="activity-line"><span id="statusDetail">영상을 선택하면 미리 볼 수 있습니다.</span><b id="statusMode">IDLE</b></div></div></section>
+   <section class="panel"><div class="panel-header"><div><h2>최근 출력</h2><p>레이아웃 확인용 샘플 파일 목록</p></div><button class="btn ghost small" data-mock-action="결과 폴더 연결">폴더 열기　↗</button></div><div class="panel-body">
+      <div class="library-entry"><span class="file-ic">◇</span><div><div class="file-name">Skeleton.preview</div><div class="file-desc">3D 포즈 · 미리보기</div></div><span class="file-tag">DEMO</span></div>
+      <div class="library-entry"><span class="file-ic">▤</span><div><div class="file-name">Manny_Animation.fbx</div><div class="file-desc">리타게팅 결과 · 샘플 항목</div></div><span class="file-tag">DEMO</span></div>
+      <button class="btn full ghost" data-stage="1">본 검수 화면 살펴보기　→</button>
+      <div class="notice">※ 위 파일명은 UI 디자인 예시이며 실제 디스크 파일을 읽거나 생성하지 않습니다.</div>
+   </div></section>
+  </div>
+ </div>
+</section>
+<!-- 02: 3D Skeleton Review -->
+<section class="stage-view" id="stage-1">
+ <div class="skeleton-grid">
+  <div class="column">
+   <section class="panel">
+    <div class="panel-header"><div><h2>3D 스켈레톤 검수</h2><p>원본 동작의 프레임과 관절 구조를 확인합니다.</p></div><div class="right"><span class="chip blue">22 BONE HUMANOID</span><button class="btn ghost small" data-mock-action="원본 추적 데이터 다시 연결">데이터 불러오기　↗</button></div></div>
+    <div class="panel-body"><div class="skeleton-large" id="skeletonView">
+     <div class="viewport-overlay"><button class="active" data-view="persp">Perspective</button><button data-view="front">Front</button><button data-view="side">Side</button></div>
+     <svg viewBox="0 0 520 350"><use href="#figure"/></svg><span class="orbit-label">X / Y / Z　·　PREVIEW ONLY</span>
+    </div></div>
+    <div class="playbar"><button class="playbtn stage-play" aria-label="프리뷰 재생">▶</button><span class="time">00:02 / 00:12</span><input class="seek local-seek" type="range" min="0" max="1000" value="220" aria-label="스켈레톤 프레임"><span class="chip">FRAME <span class="frame-val">066</span></span></div>
+   </section>
+   <section class="panel"><div class="panel-header"><div><h2>관절 상태 진단</h2><p>불확실한 프레임은 검수가 필요하다는 표시를 구분합니다.</p></div><span class="chip">CONCEPT</span></div><div class="panel-body"><div class="metric-row"><div class="metric"><strong>22<i> / 22</i></strong><small>리그에 정의된 관절</small></div><div class="metric"><strong>XY / Z</strong><small>관절 위치 검수</small></div><div class="metric"><strong>3<i>views</i></strong><small>투영 방향 비교</small></div></div></div></section>
+  </div>
+  <div class="column">
+   <section class="panel"><div class="panel-header"><div><h2>본 계층 구조</h2><p>검사할 본을 선택합니다.</p></div><span class="chip">HIERARCHY</span></div><div class="bone-tree" id="boneTree">
+    <div class="bone-row active" data-bone="Hips"><span>Hips</span><small>ROOT</small></div>
+    <div class="bone-row" data-bone="Spine"><span style="padding-left:12px">Spine</span><small>001</small></div>
+    <div class="bone-row" data-bone="Chest"><span style="padding-left:24px">Chest</span><small>002</small></div>
+    <div class="bone-row" data-bone="Neck"><span style="padding-left:36px">Neck</span><small>003</small></div>
+    <div class="bone-row" data-bone="Head"><span style="padding-left:48px">Head</span><small>004</small></div>
+    <div class="bone-row" data-bone="LeftShoulder"><span style="padding-left:24px">Left Shoulder</span><small>L</small></div>
+    <div class="bone-row" data-bone="LeftElbow"><span style="padding-left:36px">Left Elbow</span><small>L</small></div>
+    <div class="bone-row" data-bone="LeftWrist"><span style="padding-left:48px">Left Wrist</span><small>L</small></div>
+    <div class="bone-row" data-bone="RightShoulder"><span style="padding-left:24px">Right Shoulder</span><small>R</small></div>
+    <div class="bone-row" data-bone="RightElbow"><span style="padding-left:36px">Right Elbow</span><small>R</small></div>
+    <div class="bone-row" data-bone="LeftKnee"><span style="padding-left:12px">Left Knee</span><small>L</small></div>
+    <div class="bone-row" data-bone="RightKnee"><span style="padding-left:12px">Right Knee</span><small>R</small></div>
+   </div></section>
+   <section class="panel"><div class="panel-header"><div><h2>선택한 본</h2><p id="selectedBone">Hips · Root Bone</p></div></div><div class="panel-body">
+      <div class="field-label">POSITION　<span class="tiny-hint">샘플 값</span></div><div class="axis"><label>X<input type="number" value="0.00" step=".1"></label><label>Y<input type="number" value="0.00" step=".1"></label><label>Z<input type="number" value="0.94" step=".1"></label></div>
+      <div class="field-section"><div class="field-label">ROTATION</div><div class="axis"><label>X°<input type="number" value="0.0" step="1"></label><label>Y°<input type="number" value="-4.5" step="1"></label><label>Z°<input type="number" value="2.1" step="1"></label></div></div>
+      <hr class="divider"><button class="btn primary full" data-stage="2">모델 적용 단계로　→</button><p class="tip" style="margin:10px 0 0">이 화면의 숫자와 관절 구조는 레이아웃 시연용 데이터입니다.</p>
+   </div></section>
+  </div>
+ </div>
+</section>
+<!-- 03: Model Retargeting -->
+<section class="stage-view" id="stage-2">
+ <div class="retarget-grid">
+  <div class="column">
+   <section class="panel"><div class="panel-header"><div><h2>리타게팅 비교 뷰</h2><p>추출한 스켈레톤과 목표 모델의 동작을 비교합니다.</p></div><div class="right"><span class="chip mint">PREVIEW CONCEPT</span></div></div>
+    <div class="panel-body"><div class="compare-view"><div class="skeleton-large"><svg viewBox="0 0 520 350"><use href="#figure"/></svg><span class="rig-badge">SOURCE / MOTION RIG</span></div><div class="skeleton-large"><svg viewBox="0 0 520 350" style="filter:hue-rotate(47deg)"><use href="#figure"/></svg><span class="rig-badge">TARGET / MANNY DEMO</span></div></div></div>
+    <div class="playbar"><button class="playbtn stage-play" aria-label="리타게팅 프리뷰 재생">▶</button><span class="time">00:02 / 00:12</span><input class="seek local-seek" type="range" min="0" max="1000" value="220" aria-label="리타게팅 프레임"><span class="chip">SYNCED</span></div>
+   </section>
+   <section class="panel"><div class="panel-header"><div><h2>본 매핑 개요</h2><p>출처 리그와 타깃 리그의 연결 상태를 빠르게 확인</p></div><span class="chip">MAPPING</span></div><div class="panel-body">
+     <div class="mapping"><div><b>Pelvis / Hips</b><br><em>Root chain</em></div><span>●　Mapped</span></div>
+     <div class="mapping"><div><b>Spine / Chest</b><br><em>Upper body</em></div><span>●　Mapped</span></div>
+     <div class="mapping"><div><b>Arm / Hand</b><br><em>Left + Right</em></div><span>●　Mapped</span></div>
+     <div class="mapping"><div><b>Leg / Foot</b><br><em>Left + Right</em></div><span>●　Mapped</span></div>
+   </div></section>
+  </div>
+  <div class="column">
+   <section class="panel"><div class="panel-header"><div><h2>목표 캐릭터</h2><p>RETARGET SETTINGS</p></div><span class="chip blue">DEMO</span></div><div class="panel-body">
+      <div class="field-label">리타게팅 대상</div><select class="select" id="targetModel"><option>Unreal Engine · Manny</option><option>외부 FBX 스켈레톤 · 구상</option><option>커스텀 캐릭터 · 구상</option></select>
+      <p class="tip" style="margin:8px 0 0">현재 실제 프로젝트의 기본 대상은 Manny입니다. 커스텀 모델 선택 UI는 확장안입니다.</p>
+      <div class="field-section"><div class="field-label">변환 옵션</div><div class="setting-row"><span>Root Motion 포함</span><button class="switch on" aria-label="Root Motion 토글" aria-pressed="true"></button></div><div class="setting-row"><span>발 접지 보정</span><button class="switch on" aria-label="발 접지 보정 토글" aria-pressed="true"></button></div><div class="setting-row"><span>원본 시퀀스 유지</span><button class="switch on" aria-label="원본 시퀀스 유지 토글" aria-pressed="true"></button></div></div>
+      <div class="field-section"><div class="field-label">출력 포맷</div><div class="seg" id="exportFormat"><button class="active" data-mode="FBX">FBX</button><button data-mode="BLEND">BLEND</button></div></div>
+      <hr class="divider"><button class="btn primary full" data-mock-action="애니메이션 출력">↓　애니메이션 내보내기</button><p class="tip" style="margin:9px 0 0">실제 출력은 현재 Python 파이프라인 연동 후 사용 가능합니다.</p>
+    </div></section>
+   <section class="panel"><div class="panel-header"><div><h2>출력 예정 파일</h2><p>파일 구조 미리보기 · 생성되지 않음</p></div></div><div class="panel-body" style="padding-top:14px">
+      <div class="library-entry"><span class="file-ic">▤</span><div><div class="file-name">Manny_Animation.fbx</div><div class="file-desc">Engine-compatible animation</div></div></div>
+      <div class="library-entry"><span class="file-ic">▥</span><div><div class="file-name">Manny_Animation.blend</div><div class="file-desc">Blender project</div></div></div>
+      <button class="btn ghost full" data-stage="3">타임라인 편집 화면　→</button>
+    </div></section>
+  </div>
+ </div>
+</section>
+<!-- 04: Animation Edit -->
+<section class="stage-view" id="stage-3">
+ <div class="editor-grid">
+  <div class="column">
+   <section class="panel"><div class="panel-header"><div><h2>애니메이션 에디터</h2><p>포즈, 키프레임, 구간을 한 화면에서 조절하는 작업 공간</p></div><div class="right"><span class="chip">EDIT MODE</span><button class="btn ghost small" data-mock-action="편집 데이터 저장">저장　⌘S</button></div></div>
+    <div class="panel-body" style="padding-bottom:12px"><div class="skeleton-large" id="editorViewport" style="min-height:335px"><div class="viewport-overlay"><button class="active">Scene</button></div><svg viewBox="0 0 520 350" style="height:315px"><use href="#figure"/></svg><span class="orbit-label">POSE INSPECTOR / DEMO</span></div></div>
+    <div class="timeline">
+     <div class="timeline-tools"><b>KEYFRAME TIMELINE</b><span class="chip">30 FPS</span><button class="btn ghost small" id="addKey">＋ 키 추가</button><button class="btn ghost small" id="resetKeys">초기화</button></div>
+     <input class="timeline-range" id="editorSeek" type="range" min="0" max="1000" value="220" aria-label="타임라인 재생 위치">
+     <div class="timeline-ruler"><span>00:00</span><span>00:03</span><span>00:06</span><span>00:09</span><span>00:12</span></div>
+     <div id="editorTracks">
+      <div class="track"><span class="track-label">◆ Root</span><div class="track-line" data-track="0"><span class="key" style="left:7%"></span><span class="key" style="left:33%"></span><span class="key" style="left:68%"></span><span class="key" style="left:86%"></span></div></div>
+      <div class="track"><span class="track-label">◆ Spine</span><div class="track-line" data-track="1"><span class="key" style="left:15%"></span><span class="key" style="left:41%"></span><span class="key" style="left:69%"></span></div></div>
+      <div class="track"><span class="track-label">◆ Left Arm</span><div class="track-line" data-track="2"><span class="key" style="left:7%"></span><span class="key" style="left:28%"></span><span class="key" style="left:51%"></span><span class="key" style="left:85%"></span></div></div>
+      <div class="track"><span class="track-label">◆ Right Arm</span><div class="track-line" data-track="3"><span class="key" style="left:14%"></span><span class="key" style="left:35%"></span><span class="key" style="left:71%"></span></div></div>
+      <div class="track"><span class="track-label">◆ Legs</span><div class="track-line" data-track="4"><span class="key" style="left:7%"></span><span class="key" style="left:23%"></span><span class="key" style="left:62%"></span><span class="key" style="left:91%"></span></div></div>
+     </div>
+    </div>
+   </section>
+  </div>
+  <div class="column">
+   <section class="panel editor-inspector"><div class="panel-header"><div><h2>포즈 컨트롤</h2><p>TRANSFORM INSPECTOR</p></div><span class="chip">LOCAL AXIS</span></div><div class="panel-body">
+     <div class="field-label">선택한 본</div><select class="select" id="editBone"><option>Hips</option><option>Spine</option><option>Left Arm</option><option>Right Arm</option><option>Left Leg</option><option>Right Leg</option></select>
+     <div class="field-section"><div class="field-label">이동 (POSITION)</div><div class="axis"><label>X<input type="number" step=".1" value="0.0"></label><label>Y<input type="number" step=".1" value="0.0"></label><label>Z<input type="number" step=".1" value="0.9"></label></div></div>
+     <div class="field-section"><div class="field-label">회전 (ROTATION)</div><div class="axis"><label>X°<input type="number" step="1" value="0"></label><label>Y°<input type="number" step="1" value="-4"></label><label>Z°<input type="number" step="1" value="2"></label></div></div>
+     <div class="field-section"><div class="field-label">프리뷰 속도</div><select class="select" id="speedSelect"><option value=".5">0.5x · Slow</option><option value="1" selected>1.0x · Normal</option><option value="1.5">1.5x · Fast</option><option value="2">2.0x · Fastest</option></select></div>
+     <hr class="divider"><button class="btn primary full" data-mock-action="키프레임 보정 결과 저장">✓　변경 사항 저장</button>
+     <p class="tip" style="margin:10px 0 0">트랙 마커 추가, 선택, 프레임 이동은 인터랙티브 데모입니다. 실제 본 회전값은 수정되지 않습니다.</p>
+    </div></section>
+   <section class="panel"><div class="panel-header"><div><h2>편집 상태</h2><p>선택 프레임</p></div><span class="chip blue">TIMELINE</span></div><div class="panel-body"><div style="display:flex;align-items:baseline;justify-content:space-between"><strong id="editorFrame" style="font:26px Consolas,monospace;color:#dceeff">0066</strong><span style="color:#7e9db4;font:11px Consolas,monospace">/ 0375 FRAMES</span></div><hr class="divider"><div class="setting-row"><span>프레임 스냅</span><button class="switch on" aria-label="프레임 스냅 토글" aria-pressed="true"></button></div><div class="setting-row"><span>선택 본 하이라이트</span><button class="switch on" aria-label="본 하이라이트 토글" aria-pressed="true"></button></div></div></section>
+  </div>
+ </div>
+</section>
+<footer class="footer"><div><span class="ok">●</span>　STANDALONE DESIGN CONCEPT　·　변경된 실제 엔진 파일 없음　·　HTML ONLY</div><div class="version">MOTION STUDIO / VERSION 0.1 CONCEPT　|　PRESS <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> TO NAVIGATE</div></footer>
+</main>
+</div>
+<div class="toast" id="toast">✓　알림</div>
+<div class="modal-back" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle"><div class="modal"><h3 id="helpTitle">Motion Studio — 디자인 목업 안내</h3><p>이 페이지는 현재 UnrealMotionCaptureProgram 프로젝트의 <b>화면 개편안</b>입니다. 설치나 로그인 없이 HTML 파일을 열어 사용할 수 있습니다.</p><ul><li>왼쪽 4단계를 클릭해 실제 프로그램과 비슷한 작업 흐름을 확인하세요.</li><li>영상 파일을 끌어놓으면 브라우저가 그 영상만 로컬에서 재생합니다.</li><li>트래킹 진행 버튼은 시뮬레이션이며 모델 분석이나 파일 저장은 수행하지 않습니다.</li><li>본 검수의 시점 버튼, 타임라인 키 추가, UI 토글 등을 눌러 볼 수 있습니다.</li><li>실제 앱으로 적용할 때는 기존 Tkinter 위젯 구현이나 별도의 웹뷰 기술로 화면을 옮겨야 합니다.</li></ul><div class="actions"><button class="btn primary" id="closeHelp">확인</button></div></div></div>
+<script>
+(function(){
+  "use strict";
+  var $ = function(s){return document.querySelector(s);};
+  var $$ = function(s){return Array.from(document.querySelectorAll(s));};
+  var titles = [
+    ["01 / MOTION TRACKING","영상에서 움직임 추출하기","영상 가져오기부터 모션 분석까지. 핵심 단계만 남긴 단순한 워크플로."],
+    ["02 / SKELETON REVIEW","관절 구조를 직관적으로 검수하기","관절 계층, 시점, 선택 본의 상태를 한눈에 확인합니다."],
+    ["03 / RETARGET STUDIO","움직임을 캐릭터에 적용하기","소스 본과 대상 모델을 비교하고 출력 포맷을 설정합니다."],
+    ["04 / ANIMATION EDITOR","모션을 다듬어 완성하기","프레임 단위 타임라인과 직관적인 트랜스폼 인스펙터."]
+  ];
+  var activeStage=0, fileURL=null, loaded=false, demoPlaying=false, duration=12.5, seconds=2.7;
+  var lastTick=performance.now(), simulation=null, simValue=0, toastTimer=null;
+  function toast(message){
+    var e=$("#toast"); e.textContent="◇　"+message; e.classList.add("show");
+    clearTimeout(toastTimer);toastTimer=setTimeout(function(){e.classList.remove("show");},3400);
+  }
+  function stage(n){
+    activeStage=n;
+    $$(".stage-view").forEach(function(e){e.classList.toggle("active",e.id==="stage-"+n);});
+    $$(".side-step,.pipeline button").forEach(function(e){
+      var k=Number(e.getAttribute("data-stage"));
+      e.classList.toggle("active",k===n);
+      if(e.closest(".pipeline"))e.classList.toggle("completed",k<n);
+    });
+    $("#heroKicker").textContent=titles[n][0];$("#heroTitle").textContent=titles[n][1];
+    $("#heroDesc").textContent=titles[n][2];
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+  $$("[data-stage]").forEach(function(b){b.addEventListener("click",function(){stage(Number(b.getAttribute("data-stage")));});});
+  $$("[data-mock-action]").forEach(function(b){
+    b.addEventListener("click",function(){
+      toast(b.getAttribute("data-mock-action")+" — 디자인 미리보기이며 실제 파일 작업은 수행하지 않습니다.");
+    });
+  });
+  $$(".switch").forEach(function(b){
+    b.addEventListener("click",function(){
+      b.classList.toggle("on");b.setAttribute("aria-pressed",b.classList.contains("on")?"true":"false");
+    });
+  });
+  $$(".seg").forEach(function(group){
+    group.querySelectorAll("button").forEach(function(b){
+      b.addEventListener("click",function(){
+        group.querySelectorAll("button").forEach(function(x){x.classList.remove("active");});
+        b.classList.add("active");
+        if(group.id==="targetMode"){
+          $("#targetDescription").textContent=b.dataset.mode==="auto"
+            ?"가장 중심에 있는 인물을 대상으로 가정합니다. 이 설정은 목업입니다."
+            :"직접 선택 흐름의 디자인 예시입니다. 실제 인물 클릭 추적은 아직 연결되지 않았습니다.";
+        }
+      });
+    });
+  });
+  $$(".recent-row").forEach(function(b){b.addEventListener("click",function(){
+    $$(".recent-row").forEach(function(x){x.classList.remove("active");});
+    b.classList.add("active");$("#projectName").textContent=b.dataset.project;$("#crumbName").textContent=b.dataset.project;
+    toast("예시 프로젝트 선택: "+b.dataset.project+" (실제 프로젝트 데이터는 열지 않음)");
+  });});
+  $("#targetModel").addEventListener("change",function(){
+    if(this.selectedIndex>0)toast("커스텀 리그 입력은 향후 확장 UI입니다. 실제 모델 파일은 로드되지 않습니다.");
+  });
+  function ftime(s){var v=Math.max(0,Math.floor(s));return String(Math.floor(v/60)).padStart(2,"0")+":"+String(v%60).padStart(2,"0");}
+  function syncTime(){
+    $("#currentTime").textContent=ftime(seconds);
+    $("#totalTime").textContent=ftime(duration);
+    $("#seekBar").value=String(Math.round(seconds/Math.max(.01,duration)*1000));
+    var frames=Math.round(seconds*30);
+    $("#clipSource").textContent="00:"+ftime(seconds).replace(": ",":")+":"+String(frames%30).padStart(2,"0");
+    $$(".frame-val").forEach(function(x){x.textContent=String(frames).padStart(3,"0");});
+    $("#editorFrame").textContent=String(frames).padStart(4,"0");
+    $("#editorSeek").value=String(Math.round(seconds/Math.max(.01,duration)*1000));
+  }
+  function setPlaying(value){
+    demoPlaying=value;
+    $("#playSurface").classList.toggle("playing",value);
+    $("#skeletonView").classList.toggle("playing",value);
+    $("#editorViewport").classList.toggle("playing",value);
+    $("#playBtn").textContent=value?"Ⅱ":"▶";
+    $("#previewControl").textContent=value?"Ⅱ":"▷";
+    $$(".stage-play").forEach(function(b){b.textContent=value?"Ⅱ":"▶";});
+    var v=$("#sourceVideo");
+    if(loaded){if(value){v.play().catch(function(){setPlaying(false);toast("브라우저에서 해당 영상의 재생을 지원하지 않습니다.");});}else v.pause();}
+  }
+  function togglePlaying(){setPlaying(!demoPlaying);}
+  $("#playBtn").addEventListener("click",togglePlaying);
+  $("#previewControl").addEventListener("click",togglePlaying);
+  $$(".stage-play").forEach(function(b){b.addEventListener("click",togglePlaying);});
+  $("#seekBar").addEventListener("input",function(){
+    seconds=duration*this.value/1000;if(loaded){$("#sourceVideo").currentTime=Math.min(seconds,duration);}syncTime();
+  });
+  $$(".local-seek").forEach(function(bar){bar.addEventListener("input",function(){
+    seconds=duration*Number(bar.value)/1000;if(loaded){$("#sourceVideo").currentTime=Math.min(seconds,duration);}
+    $$(".local-seek").forEach(function(x){x.value=bar.value;});syncTime();
+  });});
+  $("#editorSeek").addEventListener("input",function(){
+    seconds=duration*this.value/1000; if(loaded)$("#sourceVideo").currentTime=Math.min(seconds,duration);syncTime();
+  });
+  $("#sourceVideo").addEventListener("timeupdate",function(){
+    if(loaded){seconds=this.currentTime;syncTime();}
+  });
+  $("#sourceVideo").addEventListener("ended",function(){setPlaying(false);});
+  function loop(now){
+    var dt=Math.min((now-lastTick)/1000,.15);lastTick=now;
+    if(demoPlaying&&!loaded){seconds+=dt*Number($("#speedSelect").value);if(seconds>=duration)seconds=0;syncTime();}
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+  function writeLog(message,color){
+    var log=$("#consoleLog");var row=document.createElement("div");row.style.color=color||"#8fa9bd";
+    row.textContent="›  "+message;log.appendChild(row);
+    if(log.childElementCount>6)log.removeChild(log.firstElementChild);
+  }
+  function loadFile(file){
+    if(!file)return;
+    if(!file.type.startsWith("video/")&&!/\.(mp4|mov|webm|m4v)$/i.test(file.name)){
+      toast("영상 파일을 선택해 주세요 (MP4, MOV, WEBM).");return;
+    }
+    setPlaying(false);if(fileURL)URL.revokeObjectURL(fileURL);
+    fileURL=URL.createObjectURL(file);loaded=true;
+    $("#sourceViewport").classList.add("video-loaded");$("#sourceVideo").src=fileURL;$("#sourceVideo").load();
+    $("#inputFilename").textContent=file.name;
+    $("#inputDetail").textContent=(file.size/1024/1024).toFixed(1)+" MB · 이 PC의 파일 (업로드 없음)";
+    $("#projectName").textContent=file.name.replace(/\.[^.]+$/,"");
+    $("#crumbName").textContent=$("#projectName").textContent;
+    seconds=0;syncTime();
+    $("#statusLabel").textContent="●　영상 불러옴";$("#statusDetail").textContent="브라우저에서 영상만 미리 보기가 가능합니다.";
+    $("#statusMode").textContent="PREVIEW";
+    writeLog("Local video selected: "+file.name,"#83c0e3");
+    toast("로컬 영상이 선택되었습니다. 실제 모션 추출은 실행되지 않습니다.");
+  }
+  $("#sourceVideo").addEventListener("loadedmetadata",function(){
+    if(Number.isFinite(this.duration)&&this.duration>0){duration=this.duration;seconds=0;syncTime();}
+  });
+  $("#sourceVideo").addEventListener("error",function(){
+    if(loaded)toast("이 영상 코덱은 브라우저에서 지원되지 않을 수 있습니다. MP4(H.264)를 권장합니다.");
+  });
+  var dz=$("#dropZone"), inp=$("#videoInput");
+  dz.addEventListener("click",function(){inp.click();});
+  dz.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();inp.click();}});
+  inp.addEventListener("change",function(){loadFile(inp.files&&inp.files[0]);});
+  ["dragenter","dragover"].forEach(function(t){dz.addEventListener(t,function(e){e.preventDefault();dz.classList.add("dragover");});});
+  ["dragleave","dragend"].forEach(function(t){dz.addEventListener(t,function(e){e.preventDefault();dz.classList.remove("dragover");});});
+  dz.addEventListener("drop",function(e){e.preventDefault();dz.classList.remove("dragover");loadFile(e.dataTransfer.files[0]);});
+  window.addEventListener("dragover",function(e){e.preventDefault();});
+  window.addEventListener("drop",function(e){if(!dz.contains(e.target))e.preventDefault();});
+  function progress(p,label,detail){
+    $("#progressFill").style.width=p+"%";$("#statusPercent").textContent=p+"%";$("#statusLabel").textContent=label;
+    $("#statusDetail").textContent=detail;
+  }
+  var simStages=[
+    [12,"영상 로딩", "입력 파일 체크 시연"],
+    [30,"대상 선택", "프레임별 인물 추적 시연"],
+    [58,"3D 관절 추정", "SAM 3D + SAM 2 처리 시연"],
+    [78,"본 데이터 구성", "22본 표준 스켈레톤 구성 시연"],
+    [96,"모델 적용", "Manny 리타게팅 단계 시연"],
+    [100,"데모 완료", "실제 데이터나 파일은 생성되지 않았습니다."]
+  ];
+  $("#runDemo").addEventListener("click",function(){
+    if(simulation){
+      clearInterval(simulation);simulation=null;
+      this.textContent="▶　트래킹 과정 시뮬레이션";
+      $("#statusMode").textContent="CANCELLED";
+      progress(simValue,"●　시뮬레이션 중단","실제 추론은 실행되지 않았습니다.");
+      writeLog("Mock simulation cancelled.","#eeb88a");return;
+    }
+    var b=this;simValue=0;$("#statusMode").textContent="SIMULATION";b.textContent="■　시뮬레이션 중단";
+    writeLog("Mock workflow started — no inference backend.","#8edcc9");
+    simulation=setInterval(function(){
+      simValue=Math.min(100,simValue+1);
+      var phase=simStages.find(function(x){return simValue<=x[0];})||simStages[simStages.length-1];
+      progress(simValue,"●　"+phase[1],phase[2]);
+      if(simValue===100){
+        clearInterval(simulation);simulation=null;b.textContent="▶　트래킹 과정 다시 보기";
+        $("#statusMode").textContent="DEMO DONE";
+        writeLog("Mock workflow complete. No files exported.","#83ddc4");
+        toast("데모 완료! 02 스켈레톤 화면에서 디자인을 계속 확인할 수 있습니다.");
+      }
+    },55);
+  });
+  $$("#skeletonView .viewport-overlay button").forEach(function(b){b.addEventListener("click",function(){
+    $$("#skeletonView .viewport-overlay button").forEach(function(x){x.classList.remove("active");});
+    b.classList.add("active");$("#skeletonView").classList.remove("front","side","persp");$("#skeletonView").classList.add(b.dataset.view);
+  });});
+  $$(".bone-row").forEach(function(b){b.addEventListener("click",function(){
+    $$(".bone-row").forEach(function(x){x.classList.remove("active");});b.classList.add("active");
+    $("#selectedBone").textContent=b.dataset.bone+" · Inspection Preview";
+  });});
+  function addKey(){
+    var pos=Number($("#editorSeek").value)/10;
+    var track=$('.track-line[data-track="0"]');
+    var key=document.createElement("span");key.className="key";key.style.left=pos+"%";key.title="데모 키프레임";
+    track.appendChild(key);toast("프레임 "+$("#editorFrame").textContent+"에 데모 키프레임을 추가했습니다.");
+  }
+  $("#addKey").addEventListener("click",addKey);
+  $("#resetKeys").addEventListener("click",function(){
+    var track=$('.track-line[data-track="0"]');track.innerHTML="";
+    [7,33,68,86].forEach(function(pos){var key=document.createElement("span");key.className="key";key.style.left=pos+"%";track.appendChild(key);});
+    toast("데모 타임라인을 초기화했습니다.");
+  });
+  function openHelp(){ $("#helpModal").classList.add("open");$("#closeHelp").focus();}
+  function closeHelp(){$("#helpModal").classList.remove("open");$("#helpBtn").focus();}
+  $("#helpBtn").addEventListener("click",openHelp);
+  $("#closeHelp").addEventListener("click",closeHelp);
+  $("#helpModal").addEventListener("click",function(e){if(e.target===this)closeHelp();});
+  document.addEventListener("keydown",function(e){
+    if(e.key==="Escape"&&$("#helpModal").classList.contains("open")){closeHelp();return;}
+    if(e.altKey||e.ctrlKey||e.metaKey||e.target.matches("input,select,textarea,button")||$("#helpModal").classList.contains("open"))return;
+    if(e.key===" "){e.preventDefault();togglePlaying();}
+    if(e.key>="1"&&e.key<="4")stage(Number(e.key)-1);
+    if(e.key==="ArrowLeft"||e.key==="ArrowRight"){
+      seconds=Math.max(0,Math.min(duration,seconds+(e.key==="ArrowRight"?1:-1)/30));
+      if(loaded)$("#sourceVideo").currentTime=seconds;syncTime();
+    }
+  });
+  syncTime();
+})();
+</script>
+</body>
+</html>

@@ -52,26 +52,56 @@ def export_animation(motion,cancelled=lambda:False,*,executable=None,corrections
     before=digest(motion)
     script=ROOT/'tools/animate_reference_rig.py';rig=ROOT/'assets/skeletons/MotionHumanoid22.blend'
     processor=ROOT/'core/motion/correction.py'
+    hinge_solver=ROOT/'tools/manny_leg_alignment.py'
+    hand_solver=ROOT/'core/motion/hand_orientation.py'
     signature={'motion_sha256':before,'solver_sha256':digest(script),'rig_sha256':digest(rig),
-               'corrections':corrections,'correction_sha256':digest(processor)}
+               'corrections':corrections,'correction_sha256':digest(processor),'hinge_solver_sha256':digest(hinge_solver),
+               'hand_solver_sha256':digest(hand_solver)}
     root_dependencies={ROOT/'core/motion/root_motion.py':'root_solver_sha256',ROOT/'app/root_motion_job.py':'root_camera_job_sha256'}
     if corrections:signature.update({name:digest(path) for path,name in root_dependencies.items()})
+    from app.artifact_cache import lookup,publish,identity
+    binary=executable or find_blender()
+    cache_signature={'revision':1,'settings':signature.copy(),'blender':identity(binary),'exporter_sha256':digest(Path(__file__)),
+        'motion_code':{p.name:digest(p) for p in (ROOT/'core/motion').glob('*.py')}}
+    source_data=json.loads(motion.read_text(encoding='utf-8'))
+    if corrections:
+        raw_path=motion.parent.parent/'sam3d.json'
+        if source_data.get('raw_sha256'):
+            actual=digest(raw_path)
+            if actual!=source_data['raw_sha256']:raise ValueError('손 회전 근거의 원본 해시가 다릅니다.')
+            cache_signature['raw_sha256']=actual
+        request=motion.parent.parent/'sam-request.json'
+        if request.is_file():
+            source=Path(json.loads(request.read_text(encoding='utf-8'))['source'])
+            cache_signature['source_sha256']=digest(source)
+            if source_data.get('source_sha256') and cache_signature['source_sha256']!=source_data['source_sha256']:raise ValueError('원본 영상의 해시가 다릅니다.')
+        evidence,evidence_path=ground_evidence(motion,source_data,cancelled)
+        cache_signature['ground_evidence_sha256']=None if evidence_path is None else digest(evidence_path)
+    cached=lookup(motion.parent,'body',cache_signature,cancelled)
+    if cached is not None:return cached
     out=motion.parent/('animation-'+uuid.uuid4().hex[:12])
     log=motion.parent/(out.name+'.log')
     input_path=motion
-    evidence_path=None
+    if not corrections:evidence_path=None
     if corrections:
-        source_data=json.loads(motion.read_text(encoding='utf-8'))
-        evidence,evidence_path=ground_evidence(motion,source_data,cancelled)
         signature['ground_evidence_sha256']=source_data['input_sha256'] if evidence_path is not None else None
         from app.root_motion_job import root_observations
         observations,root_info=root_observations(motion,source_data,evidence,cancelled)
         signature['root_motion_analysis']=root_info
         data=prepare_motion(source_data,cancelled,ground_evidence=evidence,root_observations=observations)
+        raw_path=motion.parent.parent/'sam3d.json'
+        if source_data.get('raw_sha256'):
+            if digest(raw_path)!=source_data['raw_sha256']:raise ValueError('손 회전 근거의 원본 해시가 다릅니다.')
+            from core.motion.hand_orientation import palm_observations
+            raw=json.loads(raw_path.read_text(encoding='utf-8'))
+            if len(raw['frames'])!=len(data['frames']) or any(r['frame_index']!=i for i,r in enumerate(raw['frames'])):
+                raise ValueError('손 회전 근거의 프레임이 다릅니다.')
+            data['hand_orientation_observations']=palm_observations(raw)
+            signature['hand_raw_sha256']=source_data['raw_sha256']
         input_path=motion.parent/(out.name+'.input.json')
         input_path.write_text(json.dumps(data,ensure_ascii=False,allow_nan=False),encoding='utf-8')
     if cancelled():raise KeyboardInterrupt
-    args=[executable or find_blender(),'--background','--factory-startup','--python-exit-code','1','--python',str(script),'--',str(input_path),str(out)]
+    args=[binary,'--background','--factory-startup','--python-exit-code','1','--python',str(script),'--',str(input_path),str(out)]
     started=time.monotonic()
     with log.open('w',encoding='utf-8') as stream:
         process=subprocess.Popen(args,stdout=stream,stderr=subprocess.STDOUT,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
@@ -87,10 +117,12 @@ def export_animation(motion,cancelled=lambda:False,*,executable=None,corrections
                 try:process.wait(timeout=5)
                 except subprocess.TimeoutExpired:process.kill();process.wait(timeout=5)
     if cancelled():raise KeyboardInterrupt
-    if digest(motion)!=before or digest(script)!=signature['solver_sha256'] or digest(rig)!=signature['rig_sha256'] or digest(processor)!=signature['correction_sha256']:
+    if digest(motion)!=before or digest(script)!=signature['solver_sha256'] or digest(rig)!=signature['rig_sha256'] or digest(processor)!=signature['correction_sha256'] or digest(hinge_solver)!=signature['hinge_solver_sha256'] or digest(hand_solver)!=signature['hand_solver_sha256']:
         raise ValueError('애니메이션 생성 중 입력이 변경되었습니다.')
     if evidence_path is not None and digest(evidence_path)!=signature['ground_evidence_sha256']:
         raise ValueError('애니메이션 생성 중 접지 근거가 변경되었습니다.')
+    if signature.get('hand_raw_sha256') and digest(raw_path)!=signature['hand_raw_sha256']:
+        raise ValueError('애니메이션 생성 중 손 회전 근거가 변경되었습니다.')
     if corrections and any(digest(path)!=signature[name] for path,name in root_dependencies.items()):
         raise ValueError('애니메이션 생성 중 이동 보정 코드가 변경되었습니다.')
     if corrections and signature['root_motion_analysis']['status']=='estimated' and digest(motion.parent.parent/'sam3d.json')!=source_data['raw_sha256']:
@@ -103,6 +135,8 @@ def export_animation(motion,cancelled=lambda:False,*,executable=None,corrections
     (out/'report.json').write_text(json.dumps({'status':'completed',**signature,'frames':len(data['frames']),
         'corrected_motion_sha256':digest(out/'corrected-motion.json') if corrections else None,
         'frames_with_pose':data['frames_with_pose'],'elapsed_seconds':time.monotonic()-started},indent=2),encoding='utf-8')
+    publish(motion.parent,'body',cache_signature,out/'animation.blend',
+        ['animation.blend','animation.json','report.json']+(['corrected-motion.json'] if corrections else []))
     return out/'animation.blend'
 
 

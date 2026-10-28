@@ -6,6 +6,8 @@ command=unreal.SystemLibrary.get_command_line()
 match=re.search(r'-MotionRequest=(?:"([^"]+)"|(.*?)(?=\s+-|$))',command)
 if not match:raise ValueError('MotionRequest is required')
 request=json.loads(Path(match.group(1) or match.group(2)).read_text(encoding='utf-8'))
+destination=request.get('destination','/Game/MotionPreview')
+if not re.fullmatch(r'/Game/[A-Za-z0-9_/]+',destination):raise ValueError('Invalid asset destination')
 report={'passed':False,'engine_version':unreal.SystemLibrary.get_engine_version()}
 try:
     options=unreal.FbxImportUI()
@@ -23,7 +25,7 @@ try:
     anim.set_editor_property('custom_sample_rate',30)
     anim.set_editor_property('remove_redundant_keys',False)
     task=unreal.AssetImportTask()
-    for key,value in {'filename':request['fbx'],'destination_path':'/Game/MotionPreview','destination_name':'ReferenceMotion','automated':True,'save':True,'replace_existing':False,'options':options}.items():task.set_editor_property(key,value)
+    for key,value in {'filename':request['fbx'],'destination_path':destination,'destination_name':'ReferenceMotion','automated':True,'save':True,'replace_existing':False,'options':options}.items():task.set_editor_property(key,value)
     unreal.AssetToolsHelpers.get_asset_tools().import_asset_tasks([task])
     paths=list(task.get_editor_property('imported_object_paths'))
     assets=[unreal.load_asset(p) for p in paths]
@@ -35,7 +37,7 @@ try:
     report.update(imported_assets=paths,mesh=mesh.get_path_name(),animation=clip.get_path_name(),frames=count,duration_seconds=duration,skeleton=skeleton.get_path_name())
     assert abs(duration-request['expected']['fbx_duration_seconds'])<1/30+.001,(duration,request['expected'])
     # Place the reference mesh with the imported animation selected for editor playback.
-    world=unreal.EditorLevelLibrary.new_level('/Game/MotionPreview/Preview')
+    world=unreal.EditorLevelLibrary.new_level(destination+'/Preview')
     actor=unreal.EditorLevelLibrary.spawn_actor_from_class(unreal.SkeletalMeshActor,unreal.Vector(0,0,0))
     component=actor.get_editor_property('skeletal_mesh_component')
     component.set_skeletal_mesh_asset(mesh)
@@ -61,8 +63,8 @@ try:
     light=unreal.EditorLevelLibrary.spawn_actor_from_class(unreal.DirectionalLight,unreal.Vector(0,0,300),unreal.Rotator(pitch=-45,yaw=-40,roll=0))
     light.set_actor_label('Preview Light')
     unreal.EditorLevelLibrary.save_current_level()
-    unreal.EditorAssetLibrary.save_directory('/Game/MotionPreview',only_if_is_dirty=False,recursive=True)
-    report.update(passed=True,preview_map='/Game/MotionPreview/Preview',limits=['reference_mesh_only','no_target_retarget','NullRHI_import_check_not_visual_quality_review'])
+    unreal.EditorAssetLibrary.save_directory(destination,only_if_is_dirty=False,recursive=True)
+    report.update(passed=True,preview_map=destination+'/Preview',limits=['reference_mesh_only','no_target_retarget','NullRHI_import_check_not_visual_quality_review'])
 except Exception:
     report['error']=traceback.format_exc();raise
 finally:

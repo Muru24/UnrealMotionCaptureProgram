@@ -1,0 +1,222 @@
+{
+  "schema": "mmd_retarget_profile_v1",
+  "pmx_sha256": "041d8b633770bf0df7b610225d45efe2ca6d279cf13c73a6e4e5a96b1806b676",
+  "mapping": {
+    "下半身": {
+      "source": "pelvis",
+      "mode": "rest_delta"
+    },
+    "上半身": {
+      "source": "spine_01",
+      "mode": "rest_delta"
+    },
+    "上半身2": {
+      "source": "spine_02",
+      "mode": "rest_delta"
+    },
+    "首": {
+      "source": "neck_01",
+      "mode": "rest_delta"
+    },
+    "頭": {
+      "source": "head",
+      "mode": "rest_delta"
+    },
+    "左肩": {
+      "source": "clavicle_l",
+      "mode": "swing"
+    },
+    "左腕": {
+      "source": "upperarm_l",
+      "mode": "direction"
+    },
+    "左ひじ": {
+      "source": "lowerarm_l",
+      "mode": "direction"
+    },
+    "左手首": {
+      "source": "hand_l",
+      "mode": "direction"
+    },
+    "左足": {
+      "source": "thigh_l",
+      "mode": "direction"
+    },
+    "左ひざ": {
+      "source": "calf_l",
+      "mode": "direction"
+    },
+    "左足首": {
+      "source": "foot_l",
+      "mode": "direction"
+    },
+    "左つま先": {
+      "source": "ball_l",
+      "mode": "direction"
+    },
+    "左親指０": {
+      "source": "thumb_01_l",
+      "mode": "direction"
+    },
+    "左親指１": {
+      "source": "thumb_02_l",
+      "mode": "direction"
+    },
+    "左親指２": {
+      "source": "thumb_03_l",
+      "mode": "direction"
+    },
+    "左人指１": {
+      "source": "index_01_l",
+      "mode": "direction"
+    },
+    "左人指２": {
+      "source": "index_02_l",
+      "mode": "direction"
+    },
+    "左人指３": {
+      "source": "index_03_l",
+      "mode": "direction"
+    },
+    "左中指１": {
+      "source": "middle_01_l",
+      "mode": "direction"
+    },
+    "左中指２": {
+      "source": "middle_02_l",
+      "mode": "direction"
+    },
+    "左中指３": {
+      "source": "middle_03_l",
+      "mode": "direction"
+    },
+    "左薬指１": {
+      "source": "ring_01_l",
+      "mode": "direction"
+    },
+    "左薬指２": {
+      "source": "ring_02_l",
+      "mode": "direction"
+    },
+    "左薬指３": {
+      "source": "ring_03_l",
+      "mode": "direction"
+    },
+    "左小指１": {
+      "source": "pinky_01_l",
+      "mode": "direction"
+    },
+    "左小指２": {
+      "source": "pinky_02_l",
+      "mode": "direction"
+    },
+    "左小指３": {
+      "source": "pinky_03_l",
+      "mode": "direction"
+    },
+    "右肩": {
+      "source": "clavicle_r",
+      "mode": "swing"
+    },
+    "右腕": {
+      "source": "upperarm_r",
+      "mode": "direction"
+    },
+    "右ひじ": {
+      "source": "lowerarm_r",
+      "mode": "direction"
+    },
+    "右手首": {
+      "source": "hand_r",
+      "mode": "direction"
+    },
+    "右足": {
+      "source": "thigh_r",
+      "mode": "direction"
+    },
+    "右ひざ": {
+      "source": "calf_r",
+      "mode": "direction"
+    },
+    "右足首": {
+      "source": "foot_r",
+      "mode": "direction"
+    },
+    "右つま先": {
+      "source": "ball_r",
+      "mode": "direction"
+    },
+    "右親指０": {
+      "source": "thumb_01_r",
+      "mode": "direction"
+    },
+    "右親指１": {
+      "source": "thumb_02_r",
+      "mode": "direction"
+    },
+    "右親指２": {
+      "source": "thumb_03_r",
+      "mode": "direction"
+    },
+    "右人指１": {
+      "source": "index_01_r",
+      "mode": "direction"
+    },
+    "右人指２": {
+      "source": "index_02_r",
+      "mode": "direction"
+    },
+    "右人指３": {
+      "source": "index_03_r",
+      "mode": "direction"
+    },
+    "右中指１": {
+      "source": "middle_01_r",
+      "mode": "direction"
+    },
+    "右中指２": {
+      "source": "middle_02_r",
+      "mode": "direction"
+    },
+    "右中指３": {
+      "source": "middle_03_r",
+      "mode": "direction"
+    },
+    "右薬指１": {
+      "source": "ring_01_r",
+      "mode": "direction"
+    },
+    "右薬指２": {
+      "source": "ring_02_r",
+      "mode": "direction"
+    },
+    "右薬指３": {
+      "source": "ring_03_r",
+      "mode": "direction"
+    },
+    "右小指１": {
+      "source": "pinky_01_r",
+      "mode": "direction"
+    },
+    "右小指２": {
+      "source": "pinky_02_r",
+      "mode": "direction"
+    },
+    "右小指３": {
+      "source": "pinky_03_r",
+      "mode": "direction"
+    }
+  },
+  "fk_legs": [
+    "左ひざ",
+    "右ひざ",
+    "左足首",
+    "右足首"
+  ],
+  "twist_controls": {
+    "左腕": "左腕捩",
+    "左ひじ": "左手捩",
+    "右腕": "右腕捩",
+    "右ひじ": "右手捩"
+  }
+}

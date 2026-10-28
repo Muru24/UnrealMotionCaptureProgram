@@ -1,15 +1,20 @@
 """UE 5.8 commandlet: explicit MotionHumanoid22 -> template Manny retarget."""
-import json, traceback
+import json, traceback, re, sys
 from pathlib import Path
 import unreal as u
 ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'tools'))
+from manny_leg_alignment import correct_unreal_animation
 report={'passed':False}
 try:
-    source=u.load_asset('/Game/MotionPreview/ReferenceMotion')
+    source_match=re.search(r'-MannySource=(/Game/[A-Za-z0-9_/]+)(?:\s|$)',u.SystemLibrary.get_command_line())
+    source_folder=globals().get('BATCH_SOURCE') or (source_match.group(1) if source_match else '/Game/MotionPreview')
+    source=u.load_asset(source_folder+'/ReferenceMotion')
     target=u.load_asset('/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple')
     assert source and target
     tools=u.AssetToolsHelpers.get_asset_tools()
-    folder='/Game/MannyMotion'
+    match=re.search(r'-MannyOutput=(/Game/[A-Za-z0-9_/]+)(?:\s|$)',u.SystemLibrary.get_command_line())
+    folder=globals().get('BATCH_FOLDER') or (match.group(1) if match else '/Game/MannyMotion')
     def create(name,cls,factory):
         assert not u.EditorAssetLibrary.does_asset_exist(folder+'/'+name),name
         return tools.create_asset(name,folder,cls,factory)
@@ -20,6 +25,9 @@ try:
         chains.update({f'Clavicle_{side}':(f'clavicle_{side}',)*4,
                        f'Arm_{side}':(f'upperarm_{side}',f'hand_{side}',f'upperarm_{side}',f'hand_{side}'),
                        f'Leg_{side}':(f'thigh_{side}',f'ball_{side}',f'thigh_{side}',f'ball_{side}')})
+        if globals().get('BATCH_FINGERS') or '-MannyFingers' in u.SystemLibrary.get_command_line():
+            for finger in ('thumb','index','middle','ring','pinky'):
+                chains[f'{finger}_{side}']=(f'{finger}_01_{side}',f'{finger}_03_{side}',f'{finger}_01_{side}',f'{finger}_03_{side}')
     for index,(name,mesh) in enumerate((('IK_Motion22',source),('IK_Manny',target))):
         rig=create(name,u.IKRigDefinition,u.IKRigDefinitionFactory())
         c=u.IKRigController.get_controller(rig)
@@ -38,7 +46,7 @@ try:
     for chain in chains:
         assert c.set_source_chain(chain,chain),chain
     c.auto_align_all_bones(u.RetargetSourceOrTarget.TARGET,u.RetargetAutoAlignMethod.CHAIN_TO_CHAIN)
-    clip=u.load_asset('/Game/MotionPreview/ReferenceMotion_Anim')
+    clip=u.load_asset(source_folder+'/ReferenceMotion_Anim')
     inputs=u.IKRetargetBatchOperationInputs()
     for key,value in {'assets_to_retarget':[u.EditorAssetLibrary.find_asset_data(clip.get_path_name())],
                       'source_mesh':source,'target_mesh':target,'ik_retarget_asset':rtg,
@@ -47,6 +55,9 @@ try:
     result=u.IKRetargetBatchOperation.run_batch_retarget(inputs)
     report['results']=[str(x.package_name) for x in result]
     anim=next(x.get_asset() for x in result if isinstance(x.get_asset(),u.AnimSequence))
+    uncorrected=tools.duplicate_asset('Manny_Uncorrected',folder,anim)
+    report['leg_alignment']=correct_unreal_animation(anim,target)
+    report['uncorrected_comparison']=uncorrected.get_path_name()
     assert anim.get_editor_property('skeleton')==target.get_editor_property('skeleton')
     duration=anim.get_editor_property('sequence_length')
     assert abs(duration-clip.get_editor_property('sequence_length'))<.001
@@ -67,4 +78,6 @@ except Exception:
     report['error']=traceback.format_exc()
     raise
 finally:
-    (ROOT/'validation/manny/report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+    version=re.search(r'MannyLegFix(\d+)$',folder)
+    report_dir=Path(globals()['BATCH_REPORT']) if globals().get('BATCH_REPORT') else ROOT/'validation'/('manny-leg-fix'+version.group(1) if version else 'manny-leg-fix');report_dir.mkdir(exist_ok=True)
+    (report_dir/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')

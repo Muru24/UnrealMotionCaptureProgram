@@ -47,7 +47,7 @@ def test_gui_library_previews_without_inference_and_releases_before_delete(tmp_p
     try:
         dialog=app.result_panel;dialog.root=tmp_path;dialog.refresh()
         assert not hasattr(app,'library_button')
-        assert str(dialog.window.master)==str(app.preview_split)
+        assert str(dialog.window.master)==str(app.studio.workspace)
         dialog.tree.selection_set('0');dialog.select();dialog.preview()
         assert app.result_dir==result and app.capture is not None and app.source is None
         assert dialog.window.winfo_exists()

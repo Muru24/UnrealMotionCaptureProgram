@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+import json
 import re
 from uuid import uuid4
 
@@ -123,9 +124,14 @@ def run_job(source, output, settings, cancelled, progress, backend_factory=None)
             raise KeyboardInterrupt
         if settings.stage == 'pose3d':
             from app.processing3d import process_pose3d
-            return process_pose3d(source, output, backend, progress=progress, cancelled=cancelled,
+            result=process_pose3d(source, output, backend, progress=progress, cancelled=cancelled,
                                   anchors=settings.anchors)
-        from app.processing import process_pose2d
-        return process_pose2d(source, output, backend, progress=progress, cancelled=cancelled)
+        else:
+            from app.processing import process_pose2d
+            result=process_pose2d(source, output, backend, progress=progress, cancelled=cancelled)
+        with (Path(output)/'gui-preview.json').open('x',encoding='utf-8') as stream:
+            json.dump({'schema':'tracking_preview_v1','source':str(Path(source).resolve()),
+                       'tracking':'overlay.mp4'},stream,ensure_ascii=False,indent=2)
+        return result
     finally:
         backend.close()

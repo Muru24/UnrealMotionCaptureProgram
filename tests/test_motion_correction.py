@@ -75,8 +75,12 @@ def test_lifted_kicking_foot_not_pinned_to_floor():
     assert out['frames'][30]['positions'][names.index('foot_l')][2]>.2
     points=np.array([r['positions'] for r in out['frames']])
     steps=np.linalg.norm(np.diff(points[:,names.index('foot_l')],axis=0),axis=1)
-    assert steps.max()<.3
-    assert any(r['feet'][0]=='release_blend' for r in out['correction']['frames'])
+    # This fixture teleports into/out of the kick. The geometry guard must not
+    # delay that observed movement just to satisfy a world-speed clamp.
+    assert steps[~np.isin(np.arange(len(steps)),[19,39])].max()<.3
+    source_steps=np.linalg.norm(np.diff(np.array([r['positions'] for r in data['frames']])[:,names.index('foot_l')],axis=0),axis=1)
+    assert steps.max()<=source_steps.max()+.15*.9
+    assert any(r['constraint_rejections'][0] is not None for r in out['correction']['frames'])
 
 
 def test_two_link_ik_rejects_unreachable_target_and_keeps_bend_side():
@@ -199,3 +203,78 @@ def test_cropped_feet_do_not_supply_ground_evidence():
     data,_,evidence=crouch_fixture();evidence[20:65,:4,1]=1050
     out=prepare_motion(data,ground_evidence=evidence)
     assert not any(any(r['image_ground_support']) for r in out['correction']['frames'])
+
+def test_leg_guard_is_translation_invariant_and_rejects_shape_changes():
+    from core.motion.correction import leg_constraint_violation
+    p=np.array([[0,0,1],[0,-.2,.6],[0,0,.2],[0,-.18,.16]],float)
+    assert leg_constraint_violation(p,p+[4,2,-1]) is None
+    candidate=p.copy();candidate[2:,0]+=.2
+    assert leg_constraint_violation(p,candidate)=='joint_displacement'
+    # A small absolute change in a deeply bent short limb can reverse its plane.
+    a=np.array([[0,0,0],[0,-.03,-.05],[0,0,-.1],[0,-.01,-.11]],float)
+    b=a.copy();b[1,1]=.03
+    assert leg_constraint_violation(a,b) is not None
+
+
+def test_guard_rejects_false_contact_preserves_lengths_and_clears_lock():
+    data,names=fixture(60)
+    for i in range(20,40):
+        q=np.array(data['frames'][i]['positions']);hip=q[names.index('thigh_l')].copy()
+        angle=.9;rot=np.array([[1,0,0],[0,math.cos(angle),-math.sin(angle)],[0,math.sin(angle),math.cos(angle)]])
+        for part in ('calf','foot','ball'):
+            j=names.index(part+'_l');q[j]=hip+rot@(q[j]-hip)
+        data['frames'][i]['positions']=q.tolist()
+    before=copy.deepcopy(data);out=prepare_motion(data);assert data==before
+    # Liftoff must not carry the new kick displacement as an old lock offset.
+    assert out['correction']['frames'][20]['feet'][0]=='swing'
+    assert out['correction']['frames'][30]['feet'][0]=='swing'
+    q=np.array([r['positions'] for r in out['frames']])
+    for side in ('l','r'):
+        ids=[names.index(p+'_'+side) for p in ('thigh','calf','foot')]
+        for a,b in zip(ids,ids[1:]):
+            np.testing.assert_allclose(np.linalg.norm(q[:,b]-q[:,a],axis=1),.45,atol=1e-5)
+
+def test_leg_guard_checks_bend_and_plane_even_with_small_displacement():
+    from core.motion.correction import leg_constraint_violation
+    straight=np.array([[0,0,0],[0,0,-.45],[0,0,-.9],[0,-.18,-.94]],float)
+    angle=math.radians(11);bent=straight.copy()
+    bent[1]=[0,-.45*math.sin(angle),-.45*math.cos(angle)]
+    bent[2]=[0,0,-.9*math.cos(angle)];bent[3]=bent[2]+[0,-.18,-.04]
+    assert leg_constraint_violation(straight,bent)=='knee_bend'
+    angle=math.radians(9);a=straight.copy()
+    a[1]=[0,-.45*math.sin(angle),-.45*math.cos(angle)];a[2]=[0,0,-.9*math.cos(angle)];a[3]=a[2]+[0,-.18,-.04]
+    b=a.copy();b[1,:2]=[.45*math.sin(angle)*math.sin(math.pi/3),-.45*math.sin(angle)*math.cos(math.pi/3)]
+    assert leg_constraint_violation(a,b)=='knee_plane'
+
+def test_contact_gate_rejects_horizontal_foot_swing_without_height_change():
+    from core.motion.correction import contact_motion_gate
+    p=np.tile([[0,0,.1],[0,-.18,.06]],(12,1,1)).astype(float)
+    assert contact_motion_gate(p,30,.9).all()
+    p[5:,:,0]+=.1
+    gate=contact_motion_gate(p,30,.9)
+    assert not gate[4] and not gate[5]
+    assert gate[:4].all() and gate[6:].all()
+
+
+def test_contact_gate_camera_translation_cancels_and_missing_image_is_optional():
+    from core.motion.correction import contact_motion_gate
+    p=np.tile([[0,0,.1],[0,-.18,.06]],(12,1,1)).astype(float)
+    image=np.tile([[400,900],[400,900],[400,930],[400,930],[500,650]],(12,1,1)).astype(float)
+    image+=np.arange(12)[:,None,None]*3
+    assert contact_motion_gate(p,30,.9,image).all()
+    image[5:,:4,0]+=50
+    gate=contact_motion_gate(p,30,.9,image)
+    assert not gate[4] and not gate[5]
+    image[:]=np.nan
+    assert contact_motion_gate(p,30,.9,image).all()
+
+def test_release_error_fades_by_time_at_30_and_60_fps():
+    from core.motion.correction import release_offset
+    seed=np.array([.08,-.04,.02]);before=seed.copy()
+    np.testing.assert_allclose(release_offset(seed,0),seed)
+    np.testing.assert_allclose(release_offset(seed,.06),seed*.5)
+    for fps in [30,60]:
+        values=[np.linalg.norm(release_offset(seed,i/fps)) for i in range(1,round(.3*fps))]
+        assert np.all(np.diff(values)<=1e-12)
+        np.testing.assert_allclose(release_offset(seed,math.ceil(.12*fps)/fps),0)
+    np.testing.assert_array_equal(seed,before)

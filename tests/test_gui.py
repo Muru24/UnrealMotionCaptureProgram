@@ -134,3 +134,31 @@ def test_gui_cancels_active_job_before_destroy(monkeypatch):
     assert not app.worker.is_alive()
 
 
+def test_studio_navigation_preserves_video_and_busy_controls(gui_clip):
+    from tkinterdnd2 import TkinterDnD
+    from app.gui import PrototypeApp
+    root=TkinterDnD.Tk();root.withdraw();app=PrototypeApp(root)
+    try:
+        app.load_source(gui_clip)
+        pump(root,lambda:not app.busy)
+        app.seek_var.set(2);app.seek_end()
+        capture=app.capture;source=app.source
+        for index in (1,2,0,2,1,0):
+            app.studio.show_stage(index);root.update_idletasks()
+            assert [bool(page.grid_info()) for page in app.studio.pages]==[i==index for i in range(5)]
+            assert [item.selected for item in app.studio.nav]==[i==index for i in range(5)]
+            assert bool(app.skeleton_panel.grid_info())==(index==1)
+            assert str(app.result_panel.window.grid_info()['in'])==str(app.studio.result_hosts[index])
+            assert app.capture is not None and app.source==source and app.position==2
+        app.busy=True;app.set_busy(True)
+        app.studio.show_stage(2)
+        for button in (app.start_button,app.candidate_button,app.result_panel.delete_button):
+            assert str(button['state'])=='disabled'
+        app.busy=False;app.set_busy(False)
+        assert str(app.start_button['state'])=='normal'
+        assert not hasattr(app,'engine_button')
+        assert not hasattr(app.studio,'bone_generate_button')
+    finally:
+        app.stop_video();root.destroy()
+
+

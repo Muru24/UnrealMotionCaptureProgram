@@ -5,7 +5,56 @@ Contact-derived translation is a ground constraint estimate, not measured world 
 import copy,math
 import numpy as np
 
-REVISION=7
+REVISION=10
+
+
+def release_offset(seed,elapsed,duration=.12):
+    """Fade only the old constraint error; never include new observed motion."""
+    t=float(np.clip(elapsed/duration,0.,1.))
+    return np.asarray(seed,float)*(1-t*t*(3-2*t))
+
+
+def contact_motion_gate(points,fps,leg_length,pixels=None):
+    """Reject moving feet using ankle AND toe motion, within one observed segment.
+
+    Coordinates are hip-relative, so this is a conservative veto, not world
+    contact measurement. Image evidence is model projection, not independent truth.
+    """
+    gate=np.ones(len(points),bool)
+    if len(points)<2:return gate
+    speed=np.linalg.norm(np.diff(points[:,:,:2],axis=0),axis=2)*fps/max(leg_length,1e-6)
+    moving=(speed>.8).any(axis=1)
+    if pixels is not None:
+        p=np.asarray(pixels,float)
+        # Relative to pelvis: uniform image/camera translation cancels out.
+        scale=np.maximum(30.,np.mean(p[:,:2,1],axis=1)-p[:,4,1])
+        relative=p[:,:4]-p[:,4:5]
+        velocity=np.linalg.norm(np.diff(relative,axis=0),axis=2)*fps
+        finite=np.isfinite(p).all(axis=(1,2))
+        reliable=finite[1:]&finite[:-1]
+        moving|=reliable&(np.max(velocity,axis=1)>.8*np.minimum(scale[1:],scale[:-1]))
+    # Both endpoints of a fast step are uncertain; do not retain an old anchor
+    # on the frame immediately before visible liftoff.
+    gate[:-1]&=~moving;gate[1:]&=~moving
+    return gate
+
+
+def leg_constraint_violation(observed,candidate):
+    """Compare hip-relative leg geometry; global root translation is not a violation."""
+    a=np.asarray(observed,float);b=np.asarray(candidate,float)
+    length=np.linalg.norm(a[1]-a[0])+np.linalg.norm(a[2]-a[1])
+    displacement=float(np.max(np.linalg.norm((b-b[0])-(a-a[0]),axis=1)))
+    def angles(p):
+        u=unit(p[1]-p[0]);v=unit(p[2]-p[1])
+        if u is None or v is None:return None,None
+        return math.acos(float(np.clip(np.dot(u,v),-1,1))),unit(np.cross(u,v))
+    x,n=angles(a);y,m=angles(b)
+    if x is None or y is None:return 'degenerate_leg'
+    if displacement>.15*length:return 'joint_displacement'
+    if abs(x-y)>math.radians(20):return 'knee_bend'
+    if min(x,y)>math.radians(15) and n is not None and m is not None:
+        if np.dot(n,m)<math.cos(math.radians(45)):return 'knee_plane'
+    return None
 
 
 def unit(v):
@@ -166,6 +215,8 @@ def prepare_motion(data,cancelled=lambda:False,*,ground_evidence=None,root_obser
             limits=(1,5) if bone['name'].startswith(('thigh_','calf_','foot_','ball_')) else (2,8)
             filtered=smooth_quaternions(np.array(quats),fps,small_change_degrees=limits)
             for k,rotation in enumerate(filtered,a):q[k,j]=q[k,p]+rotate(rotation,edge)
+    # Guard ground IK against the filtered observation, before any root or contact changes.
+    filtered_observation=q.copy()
     # Infer contact only within uninterrupted observed segments. No missing joints are filled.
     contacts=np.zeros((len(rows),2),bool);feet=[]
     for side in ('l','r'):feet.append(tuple(index[f'{n}_{side}'] for n in ('thigh','calf','foot','ball')))
@@ -177,7 +228,17 @@ def prepare_motion(data,cancelled=lambda:False,*,ground_evidence=None,root_obser
             baseline=float(np.percentile(height[observed],20))
             speed=np.zeros(b-a)
             if b-a>1:speed[1:]=np.abs(np.diff(height))*fps;speed[0]=speed[1]
-            candidate=observed&(height<=baseline+.07)&(speed<.65)
+            motion_ok=np.zeros(b-a,bool)
+            for c,d in spans(observed,keys[a:b]):
+                length=np.linalg.norm(rest[knee]-rest[hip])+np.linalg.norm(rest[ankle]-rest[knee])
+                points=q[a+c:a+d,[ankle,toe]]-q[a+c:a+d,hip:hip+1]
+                pixels=None
+                if ground_evidence is not None:
+                    pixels=np.asarray(ground_evidence,float)[a+c:a+d].copy()
+                    # The gate receives the active foot twice, plus the pelvis.
+                    pixels=pixels[:,[s,s,s+2,s+2,4]]
+                motion_ok[c:d]=contact_motion_gate(points,fps,length,pixels)
+            candidate=observed&(height<=baseline+.07)&(speed<.65)&motion_ok
             for c,d in spans(candidate,keys[a:b]):
                 if d-c>=max(2,math.ceil(.08*fps)):contacts[a+c:a+d,s]=True
     image_support=image_ground_support(q,valid,feet,index,contacts,keys,result['video'],ground_evidence,cancelled)
@@ -197,7 +258,7 @@ def prepare_motion(data,cancelled=lambda:False,*,ground_evidence=None,root_obser
             root=np.zeros(3);anchors={};poles={};previous_feet={};previous_states={};release_offsets={};landing=set()
             image_root_base=None
             drive_offset=None;drive_epoch=None;air_root_base=None
-        last=keys[i];states=[]
+        last=keys[i];states=[];rejections=[None,None]
         driven=np.isfinite(drive[i]).all()
         if driven:
             epoch=root_observations['epochs'][i]
@@ -283,10 +344,16 @@ def prepare_motion(data,cancelled=lambda:False,*,ground_evidence=None,root_obser
                 was_contact=previous_states.get(s) in ('inferred_contact','contact_transition')
                 was_constrained=previous_states.get(s) in ('inferred_contact','contact_transition','ground_collision','collision_transition','inferred_ground_support')
                 if s in previous_feet:
-                    if (is_contact and not was_contact) or (state in ('ground_collision','inferred_ground_support') and not was_constrained and s not in release_offsets):
+                    if (is_contact and not was_contact) or (state in ('ground_collision','inferred_ground_support') and not was_constrained):
                         landing.add(s);release_offsets.pop(s,None)
                     if (not is_contact and was_contact) or (not constrained and was_constrained):
-                        release_offsets[s]=previous_feet[s]-q[i,ankle];landing.discard(s)
+                        # The old code subtracted the CURRENT foot and therefore
+                        # treated genuine liftoff motion as a constraint error.
+                        if not constrained and continuous and valid[i-1,ankle]:
+                            prior=filtered_observation[i-1,ankle]+np.asarray(reports[-1]['root_offset_m'])
+                            release_offsets[s]=(previous_feet[s]-prior,i)
+                        else:release_offsets.pop(s,None)
+                        landing.discard(s)
                     target=q[i,ankle].copy();transition=False
                     if constrained and s in landing:
                         delta=target-previous_feet[s];distance=np.linalg.norm(delta)
@@ -294,13 +361,11 @@ def prepare_motion(data,cancelled=lambda:False,*,ground_evidence=None,root_obser
                             target=previous_feet[s]+delta*(3./fps/distance);transition=True
                             state='contact_transition' if state=='inferred_contact' else 'collision_transition'
                         else:landing.discard(s)
-                    elif not is_contact and s in release_offsets:
-                        offset=release_offsets[s];distance=np.linalg.norm(offset)
-                        # Fade the constraint offset, without clamping genuine source swing velocity.
-                        if was_contact:transition=True
-                        else:offset=offset*max(0.,1.-3./fps/max(distance,1e-9))
-                        release_offsets[s]=offset;target+=offset
-                        transition=transition or np.linalg.norm(offset)>.001
+                    elif not constrained and s in release_offsets:
+                        seed,start=release_offsets[s]
+                        offset=release_offset(seed,(i-start+1)/fps)
+                        target+=offset
+                        transition=np.linalg.norm(offset)>.001
                         if transition:state='release_blend'
                         else:release_offsets.pop(s,None)
                     if transition:
@@ -320,15 +385,28 @@ def prepare_motion(data,cancelled=lambda:False,*,ground_evidence=None,root_obser
                                 length=np.linalg.norm(rest[toe]-rest[ankle]);dz=.03-target[2]
                                 dz=max(-length,min(length,dz))
                                 q[i,toe]=target+direction*math.sqrt(max(0.,length*length-dz*dz));q[i,toe,2]=target[2]+dz
+                observed=filtered_observation[i,[hip,knee,ankle,toe]]
+                reason=leg_constraint_violation(observed,q[i,[hip,knee,ankle,toe]])
+                if reason is not None:
+                    # Reject the whole leg proposal instead of blending positions and stretching bones.
+                    q[i,[knee,ankle,toe]]=observed[1:]+(q[i,hip]-observed[0])
+                    anchors.pop(s,None);poles.pop(s,None);release_offsets.pop(s,None);landing.discard(s)
+                    contacts[i,s]=False;state='constraint_rejected';rejections[s]=reason
                 previous_feet[s]=q[i,ankle].copy();previous_states[s]=state
             states.append('estimated_airborne' if airborne[i] and state!='missing' else state)
         row['positions']=[q[i,j].tolist() if valid[i,j] else None for j in range(22)]
-        reports.append({'frame_index':i,'feet':states,'image_ground_support':image_support[i].tolist(),'image_moving_support':moving_support[i].tolist(),
+        reports.append({'frame_index':i,'feet':states,'constraint_rejections':rejections,'image_ground_support':image_support[i].tolist(),'image_moving_support':moving_support[i].tolist(),
                         'image_root_drive':bool(driven),'estimated_airborne':bool(airborne[i]),'root_offset_m':root.tolist() if valid[i,index['pelvis']] else None})
     image_driven=bool(np.isfinite(drive).all(axis=1).any())
     result['root_motion']=True;result['root_motion_kind']='image_and_contact_estimate' if image_driven else 'contact_constraint_estimate'
     result['correction']={'revision':REVISION,'rotation_filter':'adaptive_bidirectional_shortest_arc_quaternion_slerp',
-        'constraint_offset_release_speed_mps':3.,'root_xy_soft_speed_limit_mps':1.8,'root_z_soft_speed_limit_mps':1.2,
+        'contact_motion_gate':{'max_planar_leg_lengths_per_second':.8,'max_image_pelvis_foot_lengths_per_second':.8,
+            'evidence':'hip_relative_ankle_and_toe_motion_veto_not_world_contact'},
+        'leg_constraint_guard':{'reference':'filtered_observation_hip_relative','max_joint_displacement_leg_fraction':.15,
+            'max_knee_bend_change_degrees':20,'max_knee_plane_change_degrees':45,'plane_min_bend_degrees':15,
+            'fallback':'reject_leg_constraint_preserve_filtered_geometry','ground_contact_may_be_released':True},
+        'constraint_offset_release_seconds':.12,'constraint_offset_release_curve':'smoothstep_old_error_only',
+        'root_xy_soft_speed_limit_mps':1.8,'root_z_soft_speed_limit_mps':1.2,
         'cutoff_hz':[.9,18],'motion_coherence_weighting':True,'isolated_impulse_degrees':12,'ik_pole_smoothing_seconds':.10,
         'small_rotation_curvature_degrees':[2,8],'small_rotation_smoothing_seconds':1/30,
         'leg_small_rotation_curvature_degrees':[1,5],

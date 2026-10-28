@@ -58,9 +58,10 @@ def test_gui_engine_button_worker(tmp_path,monkeypatch):
     monkeypatch.setattr(gui.messagebox,'showinfo',lambda *a:None)
     root=TkinterDnD.Tk();root.withdraw();app=gui.PrototypeApp(root)
     try:
-        app.result_dir=folder;app.engine_button.invoke();assert app.busy
-        assert str(app.engine_button.cget('state'))=='disabled'
+        app.result_dir=folder;app.generate_animation(engine=True);assert app.busy
+        assert not hasattr(app,'engine_button')
+        assert str(app.cancel_button.cget('state'))=='normal'
         pump(root,lambda:not app.busy)
         assert calls==[blend] and str(out) in app.status_text.get()
-        assert str(app.engine_button.cget('state'))=='normal'
+        assert str(app.cancel_button.cget('state'))=='disabled'
     finally:app.stop_video();root.destroy()

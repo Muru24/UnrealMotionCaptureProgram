@@ -3,6 +3,8 @@ import sys,json,math
 from pathlib import Path
 import bpy
 from mathutils import Vector,Matrix,Quaternion
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+from manny_leg_alignment import offline_hinge_rotations
 
 
 def oriented(direction,lateral):
@@ -46,6 +48,39 @@ def missing_spans(records,names,fps):
     return spans
 
 
+def knee_rotations(frames,names,arm,fps):
+    """Plan leg roll from observed bends, splitting at missing joints and cuts.
+
+    Reference knees are straight. Define forward bend as -Y (reference forward),
+    hence the reference hinge normal is -X. This is a convention, not skin twist.
+    """
+    result={};index={n:i for i,n in enumerate(names)}
+    for side in ('l','r'):
+        leg=[f'{p}_{side}' for p in ('thigh','calf','foot')];start=0
+        while start<len(frames):
+            rows=[];i=start;key=None
+            while i<len(frames):
+                frame=frames[i];current=(frame.get('tracking_segment'),frame.get('scene_index'))
+                values=[frame['positions'][index[n]] for n in leg]
+                if frame['positions'][index['pelvis']] is None or any(p is None for p in values):break
+                if rows and current!=key:break
+                points=[Vector(p) for p in values]
+                if min((points[1]-points[0]).length,(points[2]-points[1]).length)<1e-6:break
+                key=current;row={n:{'p':tuple(p),'q':(0,0,0,1)} for n,p in zip(leg,points)}
+                for bone,endpoint in zip(leg[:2],leg[1:]):
+                    rest=arm.data.bones[bone].matrix_local.to_3x3()
+                    q=transport_roll(rest,Vector(row[endpoint]['p'])-Vector(row[bone]['p'])).to_quaternion()
+                    row[bone]['q']=(q.x,q.y,q.z,q.w)
+                rows.append(row);i+=1
+            if rows:
+                for bone,endpoint in zip(leg[:2],leg[1:]):
+                    normal=arm.data.bones[bone].matrix_local.to_3x3().transposed()@Vector((-1,0,0))
+                    sequence=offline_hinge_rotations(rows,tuple(normal),bone,endpoint,leg,fps)
+                    for j,q in enumerate(sequence):result[start+j,bone]=Quaternion((q[3],q[0],q[1],q[2])).to_matrix()
+            start=i if rows and i<len(frames) and key!=(frames[i].get('tracking_segment'),frames[i].get('scene_index')) else i+1
+    return result
+
+
 def run(source,out):
     root=Path(__file__).resolve().parents[1]
     data=json.loads(source.read_text(encoding='utf-8'))
@@ -53,6 +88,8 @@ def run(source,out):
     if data.get('schema')!='standard_motion_positions_v1' or data['skeleton']!=spec:
         raise ValueError('Animation requires the unchanged MotionHumanoid22 definition.')
     frames=data['frames'];fps=float(data['video']['fps'])
+    hands=data.get('hand_orientation_observations')
+    if hands is not None and len(hands)!=len(frames):raise ValueError('Palm observation timeline differs.')
     if not 0<len(frames)<=18000 or not math.isfinite(fps) or not 1<=fps<=240:
         raise ValueError('Invalid animation timeline.')
     out.mkdir(parents=True,exist_ok=False)
@@ -67,6 +104,7 @@ def run(source,out):
         material=bpy.data.materials.new('Ground');material.diffuse_color=(.09,.12,.16,1)
         ground.data.materials.append(material)
     names=[b['name'] for b in spec['bones']];indices={n:i for i,n in enumerate(names)}
+    knee_plan=knee_rotations(frames,names,arm,fps)
     targets={'pelvis':'spine_01','spine_01':'spine_02','spine_02':'neck_01','neck_01':'head'}
     for side in ('l','r'):
         for a,b in (('clavicle','upperarm'),('upperarm','lowerarm'),('lowerarm','hand'),('thigh','calf'),('calf','foot'),('foot','ball')):
@@ -93,7 +131,7 @@ def run(source,out):
                 value=points[left]-points[right]
                 if value.length>1e-6:lateral=value.normalized();break
         lateral=lateral or Vector((1,0,0))
-        solved={};states={};local=[];locations=[]
+        solved={};states={};local=[];locations=[];hand_states={}
         for item in spec['bones']:
             name=item['name'];pb=arm.pose.bones[name];pb.rotation_mode='QUATERNION'
             pb.matrix_basis=Matrix.Identity(4)
@@ -124,9 +162,23 @@ def run(source,out):
                 elif anchor is not None:
                     rotation=anchor
                     if name in last_seen and gap>0:long_restarts+=1
+                if (i,name) in knee_plan:rotation=knee_plan[i,name]
             else:
                 # Leaf twist is unobservable: inherit the parent transform relative to rest.
                 rotation=(solved[parent].to_3x3()@arm.data.bones[parent].matrix_local.to_3x3().transposed()@pb.bone.matrix_local.to_3x3()) if parent else pb.bone.matrix_local.to_3x3()
+            if name in ('hand_l','hand_r'):
+                observation=hands[i].get(name[-1]) if hands is not None else None
+                hand_states[name]='inherited_no_palm_observation'
+                if valid and observation is not None and points[parent] is not None:
+                    forearm=points[name]-points[parent]
+                    if forearm.length>1e-6:
+                        raw_axis=Vector(observation['forearm']);align=raw_axis.rotation_difference(forearm.normalized())
+                        forward=align@Vector(observation['forward']);lateral_hand=align@Vector(observation['lateral'])
+                        rest_direction=Vector(item['tail'])-Vector(item['head'])
+                        # Neutral palm: fingers along reference hand, thumb side -Y.
+                        reference=oriented(rest_direction,Vector((0,-1,0)))
+                        rotation=oriented(forward,lateral_hand)@reference.transposed()@pb.bone.matrix_local.to_3x3()
+                        hand_states[name]='model_palm_frame'
             desired=rotation.to_4x4()
             desired.translation=points[name] if valid else (solved[parent]@arm.data.bones[parent].matrix_local.inverted()@pb.bone.matrix_local).translation if parent else Vector(item['head'])
             if parent:
@@ -134,6 +186,12 @@ def run(source,out):
             else:basis=pb.bone.convert_local_to_pose(desired,pb.bone.matrix_local,invert=True)
             q=basis.to_quaternion().normalized()
             if name in previous and q.dot(previous[name])<0:q.negate()
+            if hands is not None and name in ('hand_l','hand_r') and name in previous and valid:
+                # Local-space filtering follows the forearm and fades missing
+                # palm evidence toward inherited rotation without bridging cuts.
+                angle=previous[name].rotation_difference(q).angle
+                alpha=.9 if angle>math.radians(60) else 1-math.exp(-1/(fps*.03))
+                q=previous[name].slerp(q,alpha)
             if valid:previous[name]=q.copy();previous_world[name]=rotation.copy();last_seen[name]=i
             else:
                 previous.pop(name,None)
@@ -158,7 +216,7 @@ def run(source,out):
             obj.keyframe_insert('hide_viewport',frame=i+1);obj.keyframe_insert('hide_render',frame=i+1)
         valid_frames+=int(available)
         records.append({'frame_index':i,'timestamp':i/fps,'tracking_segment':key[0],'scene_index':key[1],
-                        'local_quaternions_wxyz':local,'local_locations_m':locations,'bone_status':[states[n] for n in names]})
+                        'local_quaternions_wxyz':local,'local_locations_m':locations,'hand_orientation_status':hand_states,'bone_status':[states[n] for n in names]})
     # Bake true shortest-path SLERP at quarter frames, then interpolate the dense keys.
     # Missing/cut boundaries retain step keys and visibility is always discrete.
     for i in range(len(records)-1):
@@ -202,7 +260,11 @@ def run(source,out):
         'smoothing':bool(correction),'correction':correction,'frames':records,'frames_with_pose':valid_frames,
         'playback_interpolation':'quarter_frame_slerp_linear_location_valid_spans_only',
         'max_solved_head_error_m':max_error,'max_direction_error':max_direction_error,
-        'orientation_policy':{'revision':2,'twist_prior':'parent_relative_swing_transport','twist_bones':sorted(twist_bones),
+        'orientation_policy':{'revision':4,'twist_prior':'parent_relative_swing_transport','twist_bones':sorted(twist_bones),
+            'legs':'offline_observed_knee_plane_straight_spans_transport','reference_forward_bend':'-Y',
+            'leg_rotation_frames':len(knee_plan),'knee_plane_not_measured_skin_twist':True,
+            'hands':'MHR_palm_frame_forearm_transport_local_quaternion_filter',
+            'hand_observed_frames':{n:sum(r['hand_orientation_status'][n]=='model_palm_frame' for r in records) for n in ('hand_l','hand_r')},
             'twist_time_constant_seconds':.18,'max_twist_correction_degrees_per_second':120,
             'max_applied_twist_step_degrees':math.degrees(max(twist_steps,default=0)),
             'short_gap_roll_memory_seconds':.25,'short_roll_reconnections':short_reconnections,'long_roll_restarts':long_restarts,

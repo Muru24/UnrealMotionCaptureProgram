@@ -31,7 +31,15 @@ class PrototypeApp:
         self.cancel_event = threading.Event()
         self.closing = False
         self.busy = False
+        self.pending_model_apply=False
         self.capture = None
+        self.tracking_capture=None
+        self.model_capture=None;self.model_frame=None;self.preview_is_model=False
+        self.tracking_frame=self.tracking_photo=None
+        self.requested_preview_path=None
+        self.original_preview_override=None
+        self.preview_is_original=False;self.preview_is_tracking=False
+        self.candidate_preview_frame=None;self.candidate_preview_index=None
         self.playing = False
         self.play_timer = None
         self.frame = self.photo = None
@@ -46,10 +54,11 @@ class PrototypeApp:
         self.fast_candidates = tk.BooleanVar(value=False)
         self.target = tk.StringVar(value='자동 선택')
         self.file_text = tk.StringVar(value='MP4 영상을 이곳에 드래그하세요')
-        self.info_text = tk.StringVar(value='또는 영상 선택 버튼으로 파일을 열 수 있습니다.')
+        self.info_text = tk.StringVar(value='로컬 MP4 · 최대 5분')
         self.status_text = tk.StringVar(value='준비 · 영상을 넣어 주세요')
         self.detail_text = tk.StringVar(value='결과는 새 폴더에 자동 저장됩니다.')
         self.result_kind = tk.StringVar(value='3D 미리보기')
+        self.use_refined_hands=tk.BooleanVar(value=True)
         self.time_text = tk.StringVar(value='00:00 / 00:00')
         self.seek_var = tk.DoubleVar(value=0)
         root.title('Video to Motion · MVP5 v0.8.0')
@@ -59,146 +68,20 @@ class PrototypeApp:
         root.protocol('WM_DELETE_WINDOW', self.close)
         self._build()
         self.settings_changed()
-        for widget in (root, self.drop_area, self.file_label, self.canvas):
+        for widget in (root, self.drop_area, self.file_label, self.canvas,self.tracking_canvas):
             widget.drop_target_register(DND_FILES)
             widget.dnd_bind('<<Drop>>', self.drop)
         root.after(80, self.poll)
 
     def _build(self):
-        style = ttk.Style(self.root)
-        style.theme_use('clam')
-        style.configure('.', font=('맑은 고딕',10), background='#101722', foreground='#e6edf6')
-        style.configure('TFrame', background='#101722')
-        style.configure('Panel.TFrame', background='#1b2637')
-        style.configure('Treeview',background='#1b2637',fieldbackground='#1b2637',
-                        foreground='#e6edf6',bordercolor='#3d5879',lightcolor='#1b2637',
-                        darkcolor='#1b2637',rowheight=27)
-        style.map('Treeview',background=[('selected','#3478eb')],
-                  foreground=[('selected','#ffffff')])
-        style.configure('Treeview.Heading',background='#293b52',foreground='#eef5ff',
-                        bordercolor='#3d5879',lightcolor='#293b52',darkcolor='#293b52')
-        style.map('Treeview.Heading',background=[('active','#3b5474')])
-        style.configure('TNotebook',background='#101722',bordercolor='#3d5879')
-        style.configure('TNotebook.Tab',background='#1b2637',foreground='#a7bdd6',
-                        lightcolor='#1b2637',padding=(10,7))
-        style.map('TNotebook.Tab',background=[('selected','#293b52'),('active','#213147')],
-                  foreground=[('selected','#eef5ff'),('active','#eef5ff')])
-        style.configure('Vertical.TScrollbar',background='#293b52',troughcolor='#101722',
-                        arrowcolor='#a7bdd6',bordercolor='#101722',lightcolor='#293b52',darkcolor='#293b52')
-        style.map('Vertical.TScrollbar',background=[('active','#3b5474'),('pressed','#3478eb')])
-        style.configure('TPanedwindow',background='#101722')
-        style.configure('Sash',background='#293b52',lightcolor='#293b52',
-                        darkcolor='#293b52',sashthickness=6)
-        style.configure('TButton', background='#293b52', foreground='#eef5ff', padding=(12,7), borderwidth=0)
-        style.map('TButton', background=[('active','#3b5474'),('disabled','#202a38')],
-                  foreground=[('disabled','#718096')])
-        style.configure('Accent.TButton', background='#3478eb', padding=(20,9))
-        style.map('Accent.TButton', background=[('active','#4b90ff'),('disabled','#253a58')])
-        style.configure('TCheckbutton', background='#101722', foreground='#d5e3f6')
-        style.map('TCheckbutton', background=[('active','#101722')])
-        style.configure('TCombobox', fieldbackground='#213147', background='#293b52', foreground='#edf3ff', padding=5)
-        style.map('TCombobox', fieldbackground=[('readonly','#213147')], foreground=[('readonly','#edf3ff')])
-        style.configure('Horizontal.TProgressbar', background='#4b90ff', troughcolor='#263247', borderwidth=0)
-        self.root.option_add('*TCombobox*Listbox.background','#213147')
-        self.root.option_add('*TCombobox*Listbox.foreground','#edf3ff')
-        main=ttk.Frame(self.root, padding=20)
-        main.pack(fill='both', expand=True)
-        main.columnconfigure(0,weight=1)
-        main.rowconfigure(3,weight=1)
-        header=ttk.Frame(main)
-        header.grid(row=0,column=0,sticky='ew',pady=(0,14))
-        ttk.Label(header,text='VIDEO TO UNREAL',font=('Segoe UI',20,'bold')).pack(side='left')
-        ttk.Label(header,text='MVP4  0.7.8',foreground='#8cabc9').pack(side='right')
-        self.drop_area=tk.Frame(main,bg='#1b2637',highlightbackground='#3d5879',highlightthickness=1)
-        self.drop_area.grid(row=1,column=0,sticky='ew',pady=(0,12))
-        self.file_label=tk.Label(self.drop_area,textvariable=self.file_text,bg='#1b2637',fg='#f0f5fc',
-                                  font=('맑은 고딕',13,'bold'),anchor='w',padx=16,pady=12)
-        self.file_label.pack(side='top',fill='x')
-        bottom=tk.Frame(self.drop_area,bg='#1b2637')
-        bottom.pack(fill='x',padx=16,pady=(0,12))
-        tk.Label(bottom,textvariable=self.info_text,bg='#1b2637',fg='#a7bdd6',anchor='w').pack(side='left')
-        self.choose_button=ttk.Button(bottom,text='영상 선택',command=self.choose)
-        self.choose_button.pack(side='right')
-        options=ttk.Frame(main)
-        options.grid(row=2,column=0,sticky='ew',pady=(0,12))
-        self.mode_box=ttk.Combobox(options,textvariable=self.mode,values=('3D 모션 + 원본 뼈대','SAM 3D Body (GPU 시험)','SAM 3D + SAM 2 마스크 (시험)','2D 뼈대만 (M1)'),
-                                   state='readonly',width=24)
-        self.mode_box.pack(side='left')
-        self.mode_box.bind('<<ComboboxSelected>>',self.settings_changed)
-        self.single_check=ttk.Checkbutton(options,text='영상에 한 명만 등장',variable=self.single,
-                                           command=self.settings_changed)
-        self.single_check.pack(side='left',padx=14)
-        self.candidate_button=ttk.Button(options,text='대상 확인',command=self.find_candidates,state='disabled')
-        self.candidate_button.pack(side='left',padx=(0,8))
-        self.target_box=ttk.Combobox(options,textvariable=self.target,values=('자동 선택',),
-                                     state='readonly',width=13)
-        self.target_box.pack(side='left')
-        self.fast_check=ttk.Checkbutton(options,text='빠른 후보 추론(시험)',variable=self.fast_candidates,
-            command=lambda:self.detail_text.set('빠른 후보: 처리시간을 줄이지만 팔·손목 추정이 달라질 수 있습니다.' if self.fast_candidates.get() else '기존 품질의 후보 추론을 사용합니다.'))
-        self.fast_check.pack(side='left',padx=8)
-        self.start_button=ttk.Button(options,text='출력',style='Accent.TButton',command=self.start,state='disabled')
-        self.start_button.pack(side='right')
-        self.preview_split=ttk.Panedwindow(main,orient='horizontal')
-        self.preview_split.grid(row=3,column=0,sticky='nsew')
-        viewer=ttk.Frame(self.preview_split)
-        self.preview_split.add(viewer,weight=3)
-        viewer.columnconfigure(0,weight=1)
-        viewer.rowconfigure(1,weight=1)
-        bar=ttk.Frame(viewer)
-        bar.grid(row=0,column=0,sticky='ew',pady=(0,8))
-        ttk.Label(bar,text='미리보기',font=('맑은 고딕',11,'bold')).pack(side='left')
-        self.kind_box=ttk.Combobox(bar,textvariable=self.result_kind,values=('원본 영상',),
-                                   state='disabled',width=18)
-        self.kind_box.pack(side='right')
-        self.kind_box.bind('<<ComboboxSelected>>',self.change_view)
-        self.open_sam_button=ttk.Button(bar,text='SAM 결과 열기',command=self.open_sam_result)
-        self.open_sam_button.pack(side='right',padx=4)
-        paired=ttk.Panedwindow(viewer,orient='horizontal')
-        paired.grid(row=1,column=0,sticky='nsew')
-        self.canvas=tk.Canvas(paired,bg='#080d14',highlightthickness=0)
-        paired.add(self.canvas,weight=1)
-        from app.skeleton_panel import SkeletonPanel
-        self.skeleton_panel=SkeletonPanel(paired,self.generate_motion)
-        self.animation_button=ttk.Button(self.skeleton_panel,text='Blender 애니메이션 저장',command=self.generate_animation)
-        self.animation_button.grid(row=3,column=0,sticky='ew',pady=(6,0))
-        self.engine_button=ttk.Button(self.skeleton_panel,text='Unreal · Unity FBX 저장',command=lambda:self.generate_animation(engine=True))
-        self.engine_button.grid(row=4,column=0,sticky='ew',pady=(6,0))
-        paired.add(self.skeleton_panel,weight=1)
-        self.canvas.bind('<Configure>',lambda e:self.render_frame())
-        self.canvas.create_text(450,160,text='영상을 넣고 출력 버튼을 누르세요',fill='#7690ab',font=('맑은 고딕',16),tags='placeholder')
-        controls=ttk.Frame(viewer)
-        controls.grid(row=2,column=0,sticky='ew',pady=(8,0))
-        controls.columnconfigure(1,weight=1)
-        self.play_button=ttk.Button(controls,text='재생',command=self.toggle_play,state='disabled',width=8)
-        self.play_button.grid(row=0,column=0,padx=(0,10))
-        self.seek=ttk.Scale(controls,from_=0,to=1,variable=self.seek_var,state='disabled')
-        self.seek.grid(row=0,column=1,sticky='ew')
-        self.seek.bind('<ButtonPress-1>',self.seek_begin)
-        self.seek.bind('<ButtonRelease-1>',self.seek_end)
-        self.seek.bind('<KeyRelease>',self.seek_end)
-        ttk.Label(controls,textvariable=self.time_text,width=16,anchor='e').grid(row=0,column=2,padx=(8,0))
-        status=ttk.Frame(main)
-        status.grid(row=4,column=0,sticky='ew',pady=(14,0))
-        self.status_label=ttk.Label(status,textvariable=self.status_text,font=('맑은 고딕',11,'bold'))
-        self.status_label.pack(anchor='w')
-        self.progress=ttk.Progressbar(status,mode='determinate',maximum=100)
-        self.progress.pack(fill='x',pady=(7,5))
-        ttk.Label(status,textvariable=self.detail_text,foreground='#9bb0c9',wraplength=880).pack(anchor='w')
-        footer=ttk.Frame(main)
-        footer.grid(row=5,column=0,sticky='ew',pady=(12,0))
-        ttk.Label(footer,text='SAM 후처리 자동 실행 · 주황색은 추정 · 원시 결과 보존 · 결과는 무음',
-                  foreground='#8a9fb8',font=('맑은 고딕',9)).pack(side='left')
-        self.cancel_button=ttk.Button(footer,text='취소',command=self.cancel,state='disabled')
-        self.cancel_button.pack(side='right')
-        self.folder_button=ttk.Button(footer,text='결과 폴더 열기',command=self.open_folder,state='disabled')
-        self.folder_button.pack(side='right',padx=8)
-        from app.result_browser import ResultBrowser
-        self.result_panel=ResultBrowser(self.preview_split,ROOT/'outputs',self.preview_saved_result,self.before_result_delete,lambda:self.busy)
-        self.preview_split.add(self.result_panel.window,weight=1)
+        from app.studio_layout import StudioLayout
+        self.studio = StudioLayout(self)
 
     def preview_saved_result(self,folder,path):
         if self.busy:return
         self.stop_video()
+        self.original_preview_override=None
+        self.candidate_preview_frame=None;self.candidate_preview_index=None
         self.source=None;self.run_output=None;self.candidate_dir=None;self.leg_result_path=None;self.part_result_path=None;self.reconnection_path=None
         self.result_dir=Path(folder);self.saved_preview_path=Path(path)
         self.file_text.set(self.display_name(self.result_dir.name))
@@ -211,6 +94,7 @@ class PrototypeApp:
     def before_result_delete(self,folder):
         if self.busy:raise ValueError('작업 중에는 결과를 삭제할 수 없습니다.')
         folder=Path(folder).resolve()
+        self.studio.final_panel.close_if_folder(folder)
         if any(p and Path(p).resolve().is_relative_to(folder) for p in (self.result_dir,self.saved_preview_path,self.run_output,self.source)):
             self.stop_video();self.skeleton_panel.clear();self.frame=None;self.render_frame()
             if self.source and Path(self.source).resolve().is_relative_to(folder):self.source=None
@@ -265,19 +149,8 @@ class PrototypeApp:
 
 
     def settings_changed(self,event=None):
-        self.target_frame=None
-        self.target.set('자동 선택')
-        self.target_box.configure(values=('자동 선택',))
-        self.single_check.configure(state='normal' if self.mode.get().startswith('3D') else 'disabled')
-        if self.source:
-            self.status_text.set('설정 변경 · 필요하면 대상 확인 후 출력하세요')
-        if not self.mode.get().startswith('3D'):
-            self.detail_text.set('2D는 M1 비교용 경로입니다. 상업적 활용의 가중치 조건 검토는 별도입니다.')
-        if self.mode.get().startswith('SAM'):
-            self.single_check.configure(state='disabled')
-            self.detail_text.set('SAM 출력 → 관절 검사 → 필요한 팔·다리 재추정 자동 실행 · 원시 결과 보존')
-            if 'SAM 2' in self.mode.get():
-                self.detail_text.set('SAM 2 마스크로 대상 추적 → SAM3D 자세 추정 · 시험 기능 · 가림/장면 전환 시 다른 대상 연결 가능')
+        self.target_frame=None;self.target.set('자동 선택');self.target_box.configure(values=('자동 선택',))
+        self.detail_text.set('전체 추출 한 번으로 트래킹·본·손 보정·선택 모델·파일 저장까지 진행합니다.')
 
     def choose(self):
         if self.busy:return
@@ -315,21 +188,22 @@ class PrototypeApp:
         self.worker.start()
 
     def set_busy(self,value):
-        self.skeleton_panel.convert_button.configure(state='disabled' if value else 'normal')
-        self.animation_button.configure(state='disabled' if value else 'normal')
-        self.engine_button.configure(state='disabled' if value else 'normal')
+        if self.studio.active_stage==4:
+            self.studio.status.grid() if value else self.studio.status.grid_remove()
+        self.studio.editor.set_busy(value)
+        self.studio.final_panel.set_busy(value)
+        self.studio.reconnect_button.configure(state='disabled' if value else 'normal')
+        self.studio.refresh_builtin_status()
         self.result_panel.set_busy(value)
-        self.open_sam_button.configure(state='disabled' if value else 'normal')
         for widget in (self.choose_button,self.candidate_button,self.start_button):
             widget.configure(state='disabled' if value else 'normal' if self.source or widget is self.choose_button else 'disabled')
-        self.mode_box.configure(state='disabled' if value else 'readonly')
-        self.fast_check.configure(state='disabled' if value else 'normal')
         self.target_box.configure(state='disabled' if value else 'readonly')
-        self.single_check.configure(state='disabled' if value or self.settings().stage!='pose3d' else 'normal')
         self.cancel_button.configure(state='normal' if value else 'disabled')
 
     def load_source(self,path):
         if self.busy:return
+        self.original_preview_override=None
+        self.candidate_preview_frame=None;self.candidate_preview_index=None
         self.skeleton_panel.clear()
         self.target_frame=None
         self.saved_preview_path=None
@@ -367,6 +241,7 @@ class PrototypeApp:
 
     def start(self):
         if not self.source or self.busy:return
+        self.candidate_preview_frame=None;self.candidate_preview_index=None
         post_options={'candidate_inference_type':'body'} if self.fast_candidates.get() else {}
         self.stop_video()
         self.candidate_dir=None
@@ -385,12 +260,20 @@ class PrototypeApp:
             progress=lambda done,total:self.events.put(('progress',(done,total)))
             report=run_job(source,output,settings,self.cancel_event.is_set,progress)
             if settings.stage=='sam3d':
+                # The worker has finalized the tracking video. Show it before
+                # the slower candidate/re-estimation passes, without releasing
+                # the busy guard or changing the active extraction input.
+                self.events.put(('trackingready',output))
                 from app.automatic_postprocess import process_sam_result
                 report.update(process_sam_result(output,source,self.cancel_event.is_set,progress,
                               lambda text:self.events.put(('legphase',text)),**post_options))
                 from app.motion_job import add_motion_result
                 self.events.put(('legphase','표준 스켈레톤 변환'))
                 report.update(add_motion_result(output,source,report,self.cancel_event.is_set))
+                if self.cancel_event.is_set():raise KeyboardInterrupt
+                from app.builtin_models import automatic_preview
+                self.events.put(('legphase','선택 모델 자동 적용·미리보기 렌더링'))
+                report.update(automatic_preview(output,self.cancel_event.is_set,progress))
             return output,settings,report
         self.launch_worker('completed',operation)
 
@@ -413,7 +296,7 @@ class PrototypeApp:
                     self.file_text.set(self.display_name(path.name))
                     self.info_text.set(f'{metadata.width} × {metadata.height}  ·  {metadata.fps:.2f} fps  ·  약 {metadata.duration_seconds_estimate:.1f}초')
                     self.status_text.set('준비 · 출력 버튼을 누르세요')
-                    self.detail_text.set('다중 인물 영상은 1인 옵션을 해제하고 대상 확인을 먼저 해 주세요.')
+                    self.detail_text.set('전체 추출을 누르세요. 여러 인물 중 직접 고를 때만 대상 선택을 사용하세요.')
                     self.frame=frame;self.render_frame()
                     self.open_video(self.source)
                 elif kind=='candidates':
@@ -422,10 +305,22 @@ class PrototypeApp:
                     self.position=index;self.seek_var.set(index)
                     if self.capture is not None:self.capture.set(cv2.CAP_PROP_POS_FRAMES,index+1)
                     self.time_text.set(f'{self.clock(index/self.video_fps)} / {self.clock(self.video_count/self.video_fps)}')
-                    self.frame=frame;self.render_frame()
+                    if self.studio.active_stage==0 and self.capture is not None and self.preview_is_original:
+                        self.candidate_preview_frame=frame;self.candidate_preview_index=index
+                        self.capture.set(cv2.CAP_PROP_POS_FRAMES,index);self.read_video_frame()
+                    else:self.frame=frame;self.render_frame()
                     self.target_box.configure(values=('자동 선택',)+tuple(f'대상 {i}' for i in range(count)))
                     self.target.set('대상 0' if count==1 else '자동 선택')
                     self.status_text.set(f'{index}프레임 · 후보 {count}명 · 번호를 선택한 뒤 출력하세요' if count else f'{index}프레임에 후보 없음 · 인물이 보이는 위치에서 다시 확인하세요')
+                elif kind=='trackingready':
+                    self.result_dir=Path(data)
+                    self.result_kind.set('원본 뼈대')
+                    self.kind_box.configure(values=('원본 뼈대','원본 영상'),state='disabled')
+                    self.open_video(self.result_dir/'overlay.mp4')
+                    self.status_text.set('트래킹 미리보기 준비됨 · 본 생성을 위한 자동 후처리 중')
+                    self.detail_text.set('1번 화면에서 재생·탐색할 수 있습니다. 2번 본 생성 후 3번 선택 모델 미리보기까지 자동 생성합니다.')
+                    if self.skeleton_panel.points is None:
+                        self.skeleton_panel.clear('본 생성 대기 · 자동 후처리가 끝나면 표시됩니다')
                 elif kind=='samopened':
                     folder,source,video,post,selection_kind=data;self.source=source;self.result_dir=folder
                     self.run_output=None
@@ -445,20 +340,58 @@ class PrototypeApp:
                     self.result_kind.set(values[0]);self.change_view();self.folder_button.configure(state='normal')
                     self.show_automatic_status(post)
                     if post.get('motion_error'):self.skeleton_panel.clear('변환 실패: '+post['motion_error'])
+                elif kind in ('handpreviewready','handrefineready'):
+                    self.saved_preview_path=Path(data)
+                    self.kind_box.configure(values=('저장 영상',),state='readonly');self.result_kind.set('저장 영상')
+                    self.open_video(self.saved_preview_path)
+                    self.status_text.set('손 재추정 비교 완료 · 오른쪽은 손 전용 후보 · 애니메이션에는 아직 미적용' if kind=='handrefineready' else '손 관절 미리보기 완료 · SAM 추정 투영값 확인용')
+                    self.folder_button.configure(state='normal')
+                elif kind=='editorloaded':
+                    try:
+                        self.studio.editor.loaded(*data)
+                        self.status_text.set('4번 편집 준비 완료 · 본 선택 후 위치·회전을 조절하세요')
+                    except (OSError,ValueError,KeyError) as exc:
+                        self.status_text.set('편집 모델을 불러올 수 없습니다');self.detail_text.set(str(exc))
+                elif kind=='editorapplied':
+                    self.saved_preview_path=Path(data);self.requested_preview_path=self.saved_preview_path
+                    self.studio.editor.last_output=self.saved_preview_path
+                    self.result_dir=ROOT/'outputs'/self.saved_preview_path.resolve().relative_to((ROOT/'outputs').resolve()).parts[0]
+                    self.status_text.set('편집 결과 출력 완료 · 3번에서 수정된 모델 애니메이션 확인 가능')
+                    self.studio.editor.message.set('출력 완료: '+str(self.saved_preview_path.parent)+' · animation.blend / Edited_Manny.fbx / model-preview.mp4')
+                    self.progress.configure(value=100)
+                elif kind=='finalexported':
+                    self.studio.final_panel.exported_to(data)
+                    self.progress.configure(value=100);self.status_text.set('최종 결과 내보내기 완료')
+                    self.detail_text.set(str(data))
+                elif kind=='builtininstalled':
+                    self.studio.refresh_builtin_status()
+                    self.progress.configure(value=100)
+                    self.status_text.set('기본 모델 파일 연결 완료')
+                elif kind=='usermodelinstalled':
+                    self.studio.refresh_models();self.progress.configure(value=100)
+                    self.status_text.set('모델 추가 완료 · 본·손가락 연결 준비됨')
+                    self.pending_model_apply=bool(self.result_dir and (self.result_dir/'sam3d.json').is_file())
+                elif kind in ('modelpreviewready','builtinpreviewready'):
+                    self.progress.configure(value=100)
+                    self.saved_preview_path=Path(data)
+                    if self.capture is not None:
+                        self.requested_preview_path=self.saved_preview_path;self.stage_preview_changed()
+                    else:self.open_video(self.saved_preview_path)
+                    self.status_text.set('모델 전용 미리보기 준비 완료 · 원본과 동기 재생')
                 elif kind=='motionready':
-                    self.load_standard_motion(Path(data));self.skeleton_panel.set_frame(self.position)
+                    self.load_standard_motion(Path(data));self.skeleton_panel.set_time(self.position/self.video_fps)
                     self.status_text.set('표준 스켈레톤 준비 완료 · 영상과 동기화')
                 elif kind=='engineexportready':
                     output=Path(data)
                     corrected=output.parent/'corrected-motion.json'
-                    if corrected.is_file():self.load_standard_motion(corrected);self.skeleton_panel.set_frame(self.position)
+                    if corrected.is_file():self.load_standard_motion(corrected);self.skeleton_panel.set_time(self.position/self.video_fps)
                     self.status_text.set('엔진용 FBX 저장 완료 · '+str(output))
                     messagebox.showinfo('엔진용 FBX 저장 완료','Motion_Unreal.fbx / Motion_Unity.fbx\n30fps · 기준 스켈레톤 애니메이션\n가림 구간 정보: export.json\n'+str(output))
-                elif kind=='animationready':
+                elif kind in ('animationready','fingeranimationready'):
                     corrected=Path(data).parent/'corrected-motion.json'
-                    if corrected.is_file():self.load_standard_motion(corrected);self.skeleton_panel.set_frame(self.position)
-                    self.status_text.set('Blender 애니메이션 저장 완료 · '+str(data))
-                    messagebox.showinfo('애니메이션 저장 완료','Blender에서 열고 Space로 재생하세요.\n'+str(data))
+                    if corrected.is_file():self.load_standard_motion(corrected);self.skeleton_panel.set_time(self.position/self.video_fps)
+                    self.status_text.set(('손가락 포함 52본 애니메이션 저장 완료 · ' if kind=='fingeranimationready' else 'Blender 애니메이션 저장 완료 · ')+str(data))
+                    messagebox.showinfo('애니메이션 저장 완료',('52본 Blender와 Unreal·Unity FBX를 저장했습니다. 창의 몸 미리보기는 22본이며 손가락은 Blender에서 확인하세요.\n' if kind=='fingeranimationready' else 'Blender에서 열고 Space로 재생하세요.\n')+str(data))
                 elif kind=='legphase':
                     self.leg_phase=data;self.status_text.set(data)
                 elif kind=='progress':
@@ -513,8 +446,20 @@ class PrototypeApp:
                     self.result_kind.set(values[0])
                     self.change_view()
                     self.play()
+                    if report.get('model_preview'):
+                        self.saved_preview_path=Path(report['model_preview'])
+                        self.requested_preview_path=self.saved_preview_path
+                        self.stage_preview_changed()
+                        self.status_text.set('전체 추출 완료 · 본·모델·손 보정·파일 자동 저장됨')
+                        if report.get('model_quality_warnings'):
+                            self.status_text.set('추출 저장됨 · 자동 검수에서 확인할 항목이 있습니다')
+                            self.detail_text.set(' / '.join(report['model_quality_warnings']))
+                    elif report.get('model_preview_error'):
+                        self.status_text.set('트래킹·본 저장됨 · 모델 미리보기 생성 실패')
+                        self.detail_text.set(report['model_preview_error']+' · 3번의 누락된 모델 결과 복구로 다시 시도할 수 있습니다.')
                     if report.get('motion_error'):self.skeleton_panel.clear('변환 실패: '+report['motion_error'])
                 elif kind in ('error','cancelled'):
+                    if self.leg_phase=='최종 결과 내보내기':self.studio.final_panel.message.set('내보내기 취소됨' if kind=='cancelled' else '내보내기 실패: '+str(data))
                     self.status_text.set('취소됨 · 저장된 부분 결과가 있으면 cancelled로 표시됩니다' if kind=='cancelled' else '처리 실패 · 입력과 설정을 확인해 주세요')
                     self.detail_text.set('새로 출력하면 기존 결과를 덮어쓰지 않습니다.' if kind=='cancelled' else data)
                     if self.source is None:self.info_text.set('유효한 로컬 MP4 파일 하나를 다시 넣어 주세요.')
@@ -525,7 +470,11 @@ class PrototypeApp:
                     self.busy=False
                     self.leg_phase=None
                     self.set_busy(False)
-                    self.result_panel.refresh()
+                    self.result_panel.refresh(selected=self.result_dir)
+                    if self.studio.active_stage==2:self.studio.refresh_models()
+                    if self.studio.active_stage==4:self.studio.final_panel.refresh()
+                    if self.pending_model_apply:
+                        self.pending_model_apply=False;self.root.after(0,self.apply_builtin_model)
         except Empty:
             pass
         if self.closing and not self.busy and not (self.worker and self.worker.is_alive()):
@@ -534,20 +483,65 @@ class PrototypeApp:
 
     def open_video(self,path):
         self.stop_video()
+        self.frame=None;self.requested_preview_path=Path(path)
+        from app.tracking_preview import tracking_assets,CompanionVideo
+        from app.model_preview import model_asset,prepare_model_preview
+        paired=self.studio.active_stage==0
+        model=model_asset(self.result_dir,path)
+        model_path=model.path if model and not model.legacy else None
+        original,tracking=tracking_assets(self.result_dir,self.original_preview_override or (model.source if model else None) or self.source)
+        if tracking is None and model and model.tracking and model.tracking.is_file():tracking=model.tracking
+        actual=original or (model_path if self.studio.active_stage==2 else None) or tracking or Path(path)
+        self.preview_is_original=bool(original and actual.resolve()==original.resolve())
+        self.preview_is_tracking=bool(tracking and actual.resolve()==tracking.resolve() and not self.preview_is_original)
+        self.preview_is_model=bool(model_path and actual.resolve()==model_path.resolve() and not self.preview_is_original)
         cap=cv2.VideoCapture()
-        if not cap.open(str(path),cv2.CAP_FFMPEG,[cv2.CAP_PROP_OPEN_TIMEOUT_MSEC,5000,
+        if not cap.open(str(actual),cv2.CAP_FFMPEG,[cv2.CAP_PROP_OPEN_TIMEOUT_MSEC,5000,
                                                  cv2.CAP_PROP_READ_TIMEOUT_MSEC,5000]):
-            cap.release();self.status_text.set('미리보기 영상을 열 수 없습니다');return
+            cap.release();self.status_text.set('미리보기 영상을 열 수 없습니다');self.render_frame();return
         self.capture=cap
         self.video_fps=max(1.,cap.get(cv2.CAP_PROP_FPS))
         self.video_count=max(1,int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
-        self.preview_path=Path(path)
+        self.preview_path=actual
+        if paired and tracking and tracking.resolve()!=actual.resolve():
+            try:self.tracking_capture=CompanionVideo(tracking)
+            except (ValueError,cv2.error) as exc:self.detail_text.set(str(exc))
+        if self.studio.active_stage==2 and model_path and model_path.resolve()!=actual.resolve():
+            try:self.model_capture=CompanionVideo(model_path,'모델')
+            except (ValueError,cv2.error) as exc:self.detail_text.set(str(exc))
+        if not original and self.result_dir:
+            self.detail_text.set('원본 경로를 찾을 수 없습니다. 원본 영상을 다시 연결해 주세요. 결과는 오른쪽에 표시됩니다.')
         motion=self.result_dir/'motion/motion.json' if self.result_dir else None
         if motion is not None and motion.is_file():self.load_standard_motion(motion)
-        else:self.skeleton_panel.clear('SAM 결과의 변환 버튼으로 기존 결과도 변환할 수 있습니다')
+        elif self.busy and self.run_output is not None and self.result_dir==self.run_output:
+            self.skeleton_panel.clear('본 생성 대기 · 자동 후처리가 끝나면 표시됩니다')
+        else:self.skeleton_panel.clear('본 데이터 없음 · 새 영상 추출 시 자동 생성됩니다.')
         self.seek.configure(to=self.video_count-1,state='normal')
         self.play_button.configure(state='normal')
         self.read_video_frame()
+        if self.studio.active_stage==2 and model and model.legacy and not self.busy:
+            self.status_text.set('모델 전용 미리보기 분리 중 · 기존 합본은 보존됩니다')
+            self.launch_worker('modelpreviewready',lambda:prepare_model_preview(model.path,self.cancel_event.is_set,
+                lambda done,total:self.events.put(('progress',(done,total)))))
+
+    def stage_preview_changed(self):
+        if self.requested_preview_path is None:
+            self.render_frame();return
+        if self.capture is None:
+            self.open_video(self.requested_preview_path);return
+        seconds=self.position/self.video_fps;playing=self.playing
+        self.open_video(self.requested_preview_path)
+        if self.capture is not None:
+            self.seek_var.set(min(self.video_count-1,round(seconds*self.video_fps)));self.seek_end()
+            if playing:self.play()
+
+    def reconnect_original(self):
+        if self.busy:return
+        name=filedialog.askopenfilename(parent=self.root,title='이 결과의 원본 MP4 다시 연결',filetypes=[('MP4 영상','*.mp4')])
+        if not name:return
+        # Preview-only link: do not replace extraction input or allow accidental reruns.
+        self.original_preview_override=Path(name)
+        self.stage_preview_changed()
 
     def load_standard_motion(self,path):
         try:
@@ -555,7 +549,8 @@ class PrototypeApp:
                 from app.animation_job import latest_corrected_motion
                 path=latest_corrected_motion(path)
             self.skeleton_panel.load(path)
-            original=self.source is not None and getattr(self,'preview_path',None)==self.source
+            self.skeleton_panel.set_time(self.position/self.video_fps)
+            original=self.preview_is_original
             if len(self.skeleton_panel.points)!=self.video_count and not original:
                 self.skeleton_panel.clear('표본/구간 영상은 원본 타임라인과 달라 동기 표시하지 않습니다')
         except (OSError,ValueError,KeyError) as exc:self.skeleton_panel.clear(f'스켈레톤 읽기 실패: {exc}')
@@ -585,21 +580,87 @@ class PrototypeApp:
 
 
     def render_frame(self):
-        if hasattr(self,'skeleton_panel'):self.skeleton_panel.set_frame(self.position)
-        w,h=max(1,self.canvas.winfo_width()),max(1,self.canvas.winfo_height())
-        if self.frame is None:
-            self.canvas.delete('all')
-            self.canvas.create_text(w//2,h//2,text='영상을 넣고 출력 버튼을 누르세요',fill='#7690ab',
-                                     font=('맑은 고딕',16),tags='placeholder')
-            return
-        image=Image.fromarray(cv2.cvtColor(self.frame,cv2.COLOR_BGR2RGB))
-        image.thumbnail((w,h),Image.Resampling.LANCZOS)
-        self.photo=ImageTk.PhotoImage(image,master=self.root)
-        self.canvas.delete('all')
-        self.canvas.create_image(w//2,h//2,image=self.photo,anchor='center')
+        if hasattr(self,'skeleton_panel'):self.skeleton_panel.set_time(self.position/self.video_fps)
+        stage=getattr(getattr(self,'studio',None),'active_stage',0)
+        left=self.frame if self.preview_is_original else None
+        self.photo=self.draw_preview(self.canvas,left,'원본 영상을 업로드하거나 다시 연결하세요')
+        if stage in (0,2):
+            if stage==2:
+                right=self.model_frame if self.model_capture else self.frame if self.preview_is_model else None
+                live=self.studio.editor.live_frame(self.position/self.video_fps,max(1,self.tracking_canvas.winfo_width()),max(1,self.tracking_canvas.winfo_height()))
+                if live is not None:right=live
+                self.studio.tracking_title.configure(text='모델 애니메이션 · 실시간 편집' if live is not None else '모델 애니메이션')
+                missing='이 시점의 모델 프레임이 없습니다' if self.model_capture else '모델 결과 없음\n새 추출 시 선택 모델 자동 적용 · 기존 결과는 모델 적용'
+            else:
+                right=self.tracking_frame if self.tracking_capture else self.frame if self.preview_is_tracking else None
+                missing='이 시점의 트래킹 프레임이 없습니다' if self.tracking_capture else '트래킹을 시작하면 결과가 표시됩니다'
+            if stage==0 and right is None and not self.tracking_capture and self.candidate_preview_index==self.position:
+                right=self.candidate_preview_frame
+            self.tracking_photo=self.draw_preview(self.tracking_canvas,right,missing)
 
-    def generate_animation(self,engine=False):
+    def draw_preview(self,canvas,frame,placeholder):
+        w,h=max(1,canvas.winfo_width()),max(1,canvas.winfo_height())
+        canvas.delete('all')
+        if frame is None:
+            canvas.create_text(w//2,h//2,text=placeholder,fill='#7690ab',font=('맑은 고딕',11),
+                               justify='center',width=max(1,w-32),tags='placeholder')
+            return None
+        image=Image.fromarray(cv2.cvtColor(frame,cv2.COLOR_BGR2RGB))
+        image.thumbnail((w,h),Image.Resampling.LANCZOS)
+        photo=ImageTk.PhotoImage(image,master=self.root)
+        canvas.create_image(w//2,h//2,image=photo,anchor='center')
+        return photo
+
+    def generate_hand_preview(self,refine=False):
         if self.busy or not self.result_dir:return
+        folder=Path(self.result_dir)
+        if not (folder/'sam3d.json').is_file():
+            self.status_text.set('완료된 SAM3D 결과를 선택해 주세요');return
+        self.pause();self.status_text.set('손 부분 확대 재추정 비교 생성 중 · CPU 처리' if refine else '손 관절 미리보기 생성 중 · 기존 SAM 데이터 사용')
+        def operation():
+            if refine:
+                from app.hand_refine_job import reestimate_hands
+                return str(reestimate_hands(folder,self.cancel_event.is_set,lambda a,b:self.events.put(('progress',(a,b)))))
+            from app.hand_preview_job import generate_hand_preview
+            return str(generate_hand_preview(folder,self.cancel_event.is_set,lambda a,b:self.events.put(('progress',(a,b)))))
+        self.launch_worker('handrefineready' if refine else 'handpreviewready',operation)
+
+    def add_user_model(self):
+        if self.busy:return
+        path=filedialog.askopenfilename(parent=self.root,title='모델 추가 · 본이 없으면 기본 본 생성',
+            filetypes=[('3D 모델','*.fbx *.glb *.gltf *.obj *.blend')])
+        if not path:return
+        from app.user_models import import_model
+        self.pause();self.status_text.set('모델 확인·본 준비 중 · 원본 파일 보존')
+        self.leg_phase='사용자 모델 추가';self.progress.configure(value=0)
+        self.launch_worker('usermodelinstalled',lambda:import_model(path,self.cancel_event.is_set,
+            lambda done,total:self.events.put(('progress',(done,total)))))
+
+    def install_builtin_model(self):
+        if self.busy:return
+        key=self.studio.selected_builtin()
+        path=filedialog.askopenfilename(parent=self.root,title='Unreal Manny FBX 선택',
+            filetypes=[('모델 파일','*.fbx')])
+        if not path:return
+        from app.builtin_models import install_model
+        self.status_text.set('기본 모델 불러오는 중 · 원본 파일은 보존됩니다')
+        self.progress.configure(value=0)
+        self.launch_worker('builtininstalled',lambda:install_model(key,path,self.cancel_event.is_set))
+
+    def apply_builtin_model(self):
+        if self.busy:return
+        if not self.result_dir or not (self.result_dir/'sam3d.json').is_file():
+            self.status_text.set('완료된 SAM3D 결과를 먼저 선택해 주세요');return
+        from app.builtin_models import apply_model
+        folder=self.result_dir;key=self.studio.selected_builtin()
+        self.pause();self.status_text.set('기본 모델 적용 · 본 변환 및 미리보기 생성 중')
+        self.leg_phase='기본 모델 적용·미리보기 렌더링';self.progress.configure(value=0)
+        self.launch_worker('builtinpreviewready',lambda:apply_model(folder,key,self.cancel_event.is_set,
+            lambda a,b:self.events.put(('progress',(a,b)))))
+
+    def generate_animation(self,engine=False,fingers=False):
+        if self.busy or not self.result_dir:return
+        use_refinement=bool(fingers and self.use_refined_hands.get())
         folder=Path(self.result_dir)
         if not (folder/'sam3d.json').is_file():
             self.status_text.set('완료된 SAM3D 결과를 선택해 주세요');return
@@ -612,11 +673,17 @@ class PrototypeApp:
             post=json.loads(report.read_text(encoding='utf-8')) if report.is_file() else {}
             motion,_=ensure_motion(folder,source,post,self.cancel_event.is_set)
             blend=export_animation(motion,self.cancel_event.is_set)
+            if fingers:
+                from app.finger_job import export_fingers,latest_hand_crop
+                from app.engine_export_job import export_engine_fbx
+                crop=latest_hand_crop(folder) if use_refinement else None
+                blend=export_fingers(blend,folder/'sam3d.json',self.cancel_event.is_set,**({} if crop is None else {'crop_report':crop}))
+                export_engine_fbx(blend,self.cancel_event.is_set)
             if engine:
                 from app.engine_export_job import export_engine_fbx
                 return str(export_engine_fbx(blend,self.cancel_event.is_set))
             return str(blend)
-        self.launch_worker('engineexportready' if engine else 'animationready',operation)
+        self.launch_worker('fingeranimationready' if fingers else 'engineexportready' if engine else 'animationready',operation)
 
     def generate_motion(self):
         if self.busy or not self.result_dir:return
@@ -646,6 +713,10 @@ class PrototypeApp:
         ok,frame=self.capture.read()
         if not ok:return False
         self.position=max(0,int(self.capture.get(cv2.CAP_PROP_POS_FRAMES))-1)
+        if self.tracking_capture is not None:
+            self.tracking_frame=self.tracking_capture.frame_at(self.position/self.video_fps)
+        if self.model_capture is not None:
+            self.model_frame=self.model_capture.frame_at(self.position/self.video_fps)
         self.frame=frame;self.render_frame()
         self.seek_var.set(self.position)
         self.time_text.set(f'{self.clock(self.position/self.video_fps)} / {self.clock(self.video_count/self.video_fps)}')
@@ -689,6 +760,10 @@ class PrototypeApp:
 
     def stop_video(self):
         self.pause()
+        if self.tracking_capture is not None:self.tracking_capture.close();self.tracking_capture=None
+        self.tracking_frame=None
+        if self.model_capture is not None:self.model_capture.close();self.model_capture=None
+        self.model_frame=None
         if self.capture is not None:self.capture.release();self.capture=None
         self.play_button.configure(state='disabled')
         self.seek.configure(state='disabled')
@@ -699,6 +774,10 @@ class PrototypeApp:
             except OSError:self.status_text.set('결과 폴더를 열 수 없습니다')
 
     def close(self):
+        if self.studio.editor.clip and (self.studio.editor.clip.dirty or self.studio.editor.draft):
+            if not messagebox.askyesno('편집 종료','저장하지 않은 애니메이션 편집을 버리고 종료할까요?',parent=self.root):return
+        self.studio.editor.pause()
+        self.studio.final_panel.clear()
         self.closing=True
         self.stop_video()
         if self.busy:
